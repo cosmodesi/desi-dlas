@@ -7,8 +7,6 @@ import pandas
 
 from astropy import units
 
-from frb.associate import frbassociate
-
 import pytest
 
 def test_dummy():
