@@ -56,3 +56,11 @@ This should install the package and any related scripts.
 Make sure that your PATH includes the standard
 location for Python scripts (e.g. ~/anaconda/bin)
 
+For Developers
+==============
+
+Do these for docs::
+
+    pip install nbsphinx
+
+
