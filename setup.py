@@ -22,7 +22,7 @@ setup_keywords = dict()
 #
 # THESE SETTINGS NEED TO BE CHANGED FOR EVERY PRODUCT.
 #
-setup_keywords['name'] = 'desidla'
+setup_keywords['name'] = 'desidlas'
 setup_keywords['description'] = 'Convolutional Neural Network to find DLAs'
 setup_keywords['author'] = 'Z. Cai, X. Prochaska, D. Parks et al.'
 setup_keywords['author_email'] = 'xavier@ucolick.org'
