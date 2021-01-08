@@ -38,6 +38,22 @@ If you are using Anaconda, you can check the presence of these packages with::
 If the packages have been installed, this command should print
 out all the packages and their version numbers.
 
+Install via ``pip``
+-------------------
+
+To install the dependencies using `pip <https://pypi.org/project/pip/>`_:
+
+ #. Download `requirements.txt <https://github.com/cosmodesi/desi-dlas/blob/main/desidlas/requirements.txt>`__.
+
+ #. Install the dependencies::
+
+        pip install -r requirements.txt
+
+Note that this is a "system-wide" installation, and will
+replace/upgrade any current versions of the packages you already have
+installed.
+
+
 Installing desidlas
 ===================
 
