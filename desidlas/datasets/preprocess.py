@@ -31,8 +31,8 @@ def label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE, pos_sample_
     ----------
     sightline: dla_cnn.data_model.Sightline
     pos_sample_kernel_percent: float
-    kernel: int
-    REST_RANGE: list
+    kernel: pixel numbers for each spectra window
+    REST_RANGE: [900,1346], wavelength of DLAs in the rest frame 
 
     Returns
     -------
