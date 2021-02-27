@@ -99,6 +99,7 @@ def label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE, pos_sample_
     # classification is 1 / 0 / -1 for DLA/nonDLA/border
     # offsets_array is offset
     return classification, offsets_array, column_density
+
 def rebin(sightline, v):
     """
     Resample and rebin the input Sightline object's data to a constant dlambda/lambda dispersion.
@@ -179,8 +180,8 @@ def normalize(sightline, full_wavelength, full_flux):
     parameters:
     
     sightline: dla_cnn.data_model.Sightline.Sightline object;
-    camera : str, 'b' : the blue channel of the specctra, 'r': the r channel of the spectra,
-                  'z' : the z channel of the spectra, 'all': all spectra
+    full_flux: list, flux of the spectra
+    full_wavelength: list,wavelength of the spectra 
     
     --------------------------------------------
     return
@@ -271,6 +272,7 @@ def generate_summary_table(sightlines, output_dir, mode = "w"):
             #write to the csv file
             summary_table_writer.writerow(info)
 #from dla_cnn.desi.DesiMock import DesiMock
+
 def write_summary_table(nums, version,path, output_path):
     """
     Directly read data from fits files and write the summary table, the summary table contains all available sightlines(dlas!=[] and z_qso>2.33) in the given fits files.
@@ -287,6 +289,7 @@ def write_summary_table(nums, version,path, output_path):
     #if exists summary table before, remove it
     #if exists(output_path):
         #remove(output_path)
+        
     def write_as_summary_table(num):
         """
         write summary table for a single given fits file, if there have been a summary table then directly write after it, otherwise create a new one
