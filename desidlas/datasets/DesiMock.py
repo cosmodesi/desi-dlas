@@ -105,8 +105,9 @@ class DesiMock:
             start_point: int, the start index of the slice of the data(wavelength, flux, error), default 0
             end_point: int, the end index of the slice of the data(wavelength, flux, error), default the length of the data array
             
-            Returns
+            
             -------
+            Returns:adding information about the spectra(flux,error etc.) to the sightline obkect 
             
             """
             
