@@ -283,8 +283,7 @@ def write_summary_table(nums, version,path, output_path):
     path: str, the dir of the folder which stores the given fits file, the folder's structure is like folder-fits files' id - fits files , if you are still confused, you can check the below code about read data from the fits file;
     output_path: str, the dir where the summary table is generated, and if there have been a summary table, then we will remove it and generate a new summary table;
     ------------------------------------------------------------------------------------------------------------------------------------------
-    retrun:
-    None
+    
     """
     #if exists summary table before, remove it
     #if exists(output_path):
