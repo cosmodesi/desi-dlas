@@ -113,13 +113,20 @@ def rebin(sightline, v):
     """
     # TODO -- Add inline comments
     c = 2.9979246e8
+    
+    # Set a constant dispersion
     dlnlambda = np.log(1+v/c)
     wavelength = 10**sightline.loglam #the wavelength range 
     max_wavelength = wavelength[-1]
     min_wavelength = wavelength[0]
+    
+    # Calculate how many pixels are needed for Rebinning in this spectra
     pixels_number = int(np.round(np.log(max_wavelength/min_wavelength)/dlnlambda))+1 #how many pixels in this spectra
+    
+    # Rebined wavelength
     new_wavelength = wavelength[0]*np.exp(dlnlambda*np.arange(pixels_number))
     
+    # Endpoints of original pixels
     npix = len(wavelength)
     wvh = (wavelength + np.roll(wavelength, -1)) / 2.
     wvh[npix - 1] = wavelength[npix - 1] + \
@@ -128,24 +135,30 @@ def rebin(sightline, v):
     dwv[0] = 2 * (wvh[0] - wavelength[0])
     med_dwv = np.median(dwv)
     
+    # Cumulative Sum
     cumsum = np.cumsum(sightline.flux * dwv)
     cumvar = np.cumsum(sightline.error * dwv, dtype=np.float64)
     
+    # Interpolate
     fcum = interp1d(wvh, cumsum,bounds_error=False)
     fvar = interp1d(wvh, cumvar,bounds_error=False)
     
+    # Endpoints of new pixels
     nnew = len(new_wavelength)
     nwvh = (new_wavelength + np.roll(new_wavelength, -1)) / 2.
     nwvh[nnew - 1] = new_wavelength[nnew - 1] + \
                      (new_wavelength[nnew - 1] - new_wavelength[nnew - 2]) / 2.
     
+    # Pad starting point
     bwv = np.zeros(nnew + 1)
     bwv[0] = new_wavelength[0] - (new_wavelength[1] - new_wavelength[0]) / 2.
     bwv[1:] = nwvh
     
+    # Evaluate
     newcum = fcum(bwv)
     newvar = fvar(bwv)
     
+    # Rebinned flux, var
     new_fx = (np.roll(newcum, -1) - newcum)[:-1]
     new_var = (np.roll(newvar, -1) - newvar)[:-1]
     
