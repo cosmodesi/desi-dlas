@@ -114,10 +114,10 @@ def rebin(sightline, v):
     # TODO -- Add inline comments
     c = 2.9979246e8
     dlnlambda = np.log(1+v/c)
-    wavelength = 10**sightline.loglam
+    wavelength = 10**sightline.loglam #the wavelength range 
     max_wavelength = wavelength[-1]
     min_wavelength = wavelength[0]
-    pixels_number = int(np.round(np.log(max_wavelength/min_wavelength)/dlnlambda))+1
+    pixels_number = int(np.round(np.log(max_wavelength/min_wavelength)/dlnlambda))+1 #how many pixels in this spectra
     new_wavelength = wavelength[0]*np.exp(dlnlambda*np.arange(pixels_number))
     
     npix = len(wavelength)
