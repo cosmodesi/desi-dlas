@@ -309,8 +309,7 @@ def write_summary_table(nums, version,path, output_path):
         parameter:
         num: int, the id of the given fits file, e.g. 700
         ---------------------------------------------------------------------------------------------------------------------------------------------
-        return:
-        None
+      
         """
         #read data from fits file
         file_path = join(path,str(num))
