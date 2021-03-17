@@ -1,7 +1,7 @@
 """ Methods for fussing with a spectrum """
 
 import numpy as np
-from dla_cnn.desi.defs import REST_RANGE
+from defs import REST_RANGE
 
 def get_lam_data(loglam, z_qso, REST_RANGE=REST_RANGE):
     """
