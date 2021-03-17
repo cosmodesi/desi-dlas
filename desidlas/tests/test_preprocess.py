@@ -12,6 +12,7 @@ from desidlas.dla_cnn import defs
 REST_RANGE = defs.REST_RANGE
 kernel = defs.kernel
 
+#load modules in preprocess.py
 from datasets.preprocess import label_sightline
 from datasets.preprocess import rebin
 from datasets.preprocess import normalize
