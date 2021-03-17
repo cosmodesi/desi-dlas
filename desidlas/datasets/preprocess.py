@@ -11,7 +11,8 @@
 
 import numpy as np
 from dla_cnn.spectra_utils import get_lam_data
-from dla_cnn.data_model.DataMarker import Marker
+#from dla_cnn.data_model.DataMarker import Marker
+#no Marker in the DESI mock spectra, but maybe the sv data will have this value
 from scipy.interpolate import interp1d
 from os.path import join, exists
 from os import remove
