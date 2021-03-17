@@ -1,9 +1,9 @@
 """ Methods for fussing with a spectrum """
 
 import numpy as np
-from parameter.defs import REST_RANGE
+#from parameter.defs import REST_RANGE
 
-def get_lam_data(loglam, z_qso, REST_RANGE=REST_RANGE):
+def get_lam_data(loglam, z_qso, REST_RANGE=[900, 1346, 1748]):
     """
     Generate wavelengths from the log10 wavelengths
 
