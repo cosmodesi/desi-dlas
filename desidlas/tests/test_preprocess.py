@@ -1,5 +1,5 @@
 import numpy as np
-from dla_cnn.spectra_utils import get_lam_data
+from desidlas.dla_cnn.spectra_utils import get_lam_data
 #from dla_cnn.data_model.DataMarker import Marker
 #no Marker in the mock spectra
 from scipy.interpolate import interp1d
@@ -7,7 +7,7 @@ from os.path import join, exists
 from os import remove
 import csv
 
-from dla_cnn.desi import defs
+from desidlas.dla_cnn import defs
 #load basic parameter value 
 REST_RANGE = defs.REST_RANGE
 kernel = defs.kernel
