@@ -8,6 +8,7 @@ from os import remove
 import csv
 
 from dla_cnn.desi import defs
+#load basic parameter value 
 REST_RANGE = defs.REST_RANGE
 kernel = defs.kernel
 
