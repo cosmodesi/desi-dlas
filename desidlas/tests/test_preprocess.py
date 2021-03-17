@@ -13,9 +13,9 @@ REST_RANGE = defs.REST_RANGE
 kernel = defs.kernel
 
 #load modules in preprocess.py
-from datasets.preprocess import label_sightline
-from datasets.preprocess import rebin
-from datasets.preprocess import normalize
-from datasets.preprocess import estimate_s2n
-from datasets.preprocess import generate_summary_table
-from datasets.preprocess import write_summary_table
+from desidlas.datasets.preprocess import label_sightline
+from desidlas.datasets.preprocess import rebin
+from desidlas.datasets.preprocess import normalize
+from desidlas.datasets.preprocess import estimate_s2n
+from desidlas.datasets.preprocess import generate_summary_table
+from desidlas.datasets.preprocess import write_summary_table
