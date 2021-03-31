@@ -1,9 +1,9 @@
 from astropy.io import fits
 import numpy as np
-from dla_cnn.data_model.Sightline import Sightline
-from dla_cnn.data_model.Dla import Dla
-from dla_cnn.desi import preprocess 
-from .defs import best_v
+from desidlas.data_model.Sightline import Sightline
+from desidlas.data_model.Dla import Dla
+from desidlas.datasets import preprocess 
+from desidlas.dla_cnn.defs import best_v
 
 
 class DesiMock: 
