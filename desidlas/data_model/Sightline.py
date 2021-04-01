@@ -1,5 +1,5 @@
 import numpy as np
-from dla_cnn.spectra_utils import get_lam_data
+from desidlas.dla_cnn.spectra_utils import get_lam_data
 
 class Sightline(object):
 
