@@ -24,9 +24,16 @@ spectra='desidlas/tests/datafile/spectra/spectra-16-1375.fits'
 truth='desidlas/tests/datafile/spectra/truth-16-1375.fits'
 zbest='desidlas/tests/datafile/spectra/zbest-16-1375.fits'
 
-#
+#read spectra data using DesiMock
 specs = DesiMock()
 specs.read_fits_file(spectra,truth,zbest)
+
+#get sightline id in the spectra file
+keys = list(specs.data.keys())
+jj=keys[0] #choose 1 sightline to do the test
+
+#m
+sightline = specs.get_sightline(jj,camera = 'all', rebin=False, normalize=True)
 
 def test_label_sightline():
     # Generate sightline
