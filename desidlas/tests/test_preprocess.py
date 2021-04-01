@@ -35,6 +35,11 @@ jj=keys[0] #choose 1 sightline to do the test
 #m
 sightline = specs.get_sightline(jj,camera = 'all', rebin=False, normalize=True)
 
+def test_estimate_s2n(sightline):
+    # estimate the signal-to-noise ratio
+    sightline.s2n=estimate_s2n(sightline)
+    
+
 def test_label_sightline():
     # Generate sightline
     
