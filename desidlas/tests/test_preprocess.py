@@ -1,6 +1,9 @@
 #from dla_cnn.data_model.DataMarker import Marker
 #no Marker in the mock spectra
 
+from pkg_resources import resource_filename
+import os
+
 from desidlas.dla_cnn import defs
 #load basic parameter value 
 REST_RANGE = defs.REST_RANGE
@@ -18,11 +21,12 @@ from desidlas.datasets.preprocess import write_summary_table
 #load DesiMock
 from desidlas.datasets.DesiMock import DesiMock
 
+datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
 
 #load spectra file for testing
-spectra='desidlas/tests/datafile/spectra/spectra-16-1375.fits'
-truth='desidlas/tests/datafile/spectra/truth-16-1375.fits'
-zbest='desidlas/tests/datafile/spectra/zbest-16-1375.fits'
+spectra= os.path.join(datafile_path, 'spectra', 'spectra-16-1375.fits')
+truth=os.path.join(datafile_path, 'spectra', 'truth-16-1375.fits')
+zbest=os.path.join(datafile_path, 'spectra', 'zbest-16-1375.fits')
 
 #read spectra data using DesiMock
 specs = DesiMock()
