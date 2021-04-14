@@ -42,6 +42,7 @@ sightline = specs.get_sightline(jj,camera = 'all', rebin=False, normalize=True)
 def test_estimate_s2n(sightline):
     # estimate the signal-to-noise ratio
     sightline.s2n=estimate_s2n(sightline)
+    assert sightline.s2n>0, 'SNR should be above 0!'
     
 
 
