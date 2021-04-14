@@ -44,11 +44,4 @@ def test_estimate_s2n(sightline):
     sightline.s2n=estimate_s2n(sightline)
     
 
-def test_label_sightline():
-    # Generate sightline
-    
-    # Call label_sightline
-    pass
 
-def test_rebin():
-    pass
