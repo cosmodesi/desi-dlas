@@ -3,6 +3,7 @@
 
 from pkg_resources import resource_filename
 import os
+from pathlib import Path
 
 from desidlas.dla_cnn import defs
 #load basic parameter value 
@@ -27,6 +28,11 @@ datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
 spectra= os.path.join(datafile_path, 'spectra', 'spectra-16-1375.fits')
 truth=os.path.join(datafile_path, 'spectra', 'truth-16-1375.fits')
 zbest=os.path.join(datafile_path, 'spectra', 'zbest-16-1375.fits')
+
+#cehck if the data path is correct
+assert Path(spectra).exists(), 'no spectra file! please check your data'
+assert Path(truth).exists(), 'no truth file! please check your data'
+assert Path(zbest).exists(), 'no zbest file! please check your data'
 
 #read spectra data using DesiMock
 specs = DesiMock()
