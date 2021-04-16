@@ -40,6 +40,8 @@ specs.read_fits_file(spectra,truth,zbest)
 
 #get sightline id in the spectra file
 keys = list(specs.data.keys())
+assert len(keys)>0, 'no spectra in the data file'
+
 jj=keys[0] #choose 1 sightline to do the test
 
 #m
