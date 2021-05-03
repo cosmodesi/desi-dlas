@@ -16,7 +16,50 @@ import numpy as np
 from desidlas.dla_cnn.spectra_utils import get_lam_data
 from desidlas.dla_cnn.defs import REST_RANGE,kernel,best_v
     
-    
+def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v['b']):
+        """
+    padding the left and right sides of the spectra
+
+    Parameters
+    ----------
+    sightline: dla_cnn.data_model.Sightline
+    lam: np.ndarray
+    lam_rest: np.ndarray
+    ix_dla_range: np.ndarray   Indices listing where to search for the DLA
+    kernelrangepx:int, half of the kernel
+    v:float, best v for the b band
+
+    Returns
+    flux_padded:np.ndarray,flux after padding
+    lam_padded:np.ndarray,lam after padding
+    pixel_num_left:int,the number of pixels padded to the left side of spectra 
+    -------
+
+    """
+    c = 2.9979246e8
+    dlnlambda = np.log(1+v/c)
+    #pad left side
+    if np.nonzero(ix_dla_range)[0][0]<kernelrangepx:
+        pixel_num_left=kernelrangepx-np.nonzero(ix_dla_range)[0][0]
+        pad_lam_left= lam[0]*np.exp(dlnlambda*np.array(range(-pixel_num_left,0)))
+        pad_value_left = np.mean(sightline.flux[0:50])
+    else:
+        pixel_num_left=0
+        pad_lam_left=[]
+        pad_value_left=[] 
+    #pad right side
+    if np.nonzero(ix_dla_range)[0][-1]>len(lam)-kernelrangepx:
+        pixel_num_right=kernelrangepx-(len(lam)-np.nonzero(ix_dla_range)[0][-1])
+        pad_lam_right= lam[0]*np.exp(dlnlambda*np.array(range(len(lam),len(lam)+pixel_num_right)))
+        pad_value_right = np.mean(sightline.flux[-50:])
+    else:
+        pixel_num_right=0
+        pad_lam_right=[]
+        pad_value_right=[]
+    flux_padded = np.hstack((pad_lam_left*0+pad_value_left, sightline.flux,pad_lam_right*0+pad_value_right))
+    lam_padded = np.hstack((pad_lam_left,lam,pad_lam_right))
+    return flux_padded,lam_padded,pixel_num_left
+
 def split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel):
     """
     Split the sightline into a series of snippets, each with length kernel
