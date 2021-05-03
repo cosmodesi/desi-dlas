@@ -41,5 +41,5 @@ def get_sightlines(spectra,truth,zbest):
                 rebin(sightline, best_v['b'])
                 sightlines.append(sightline)
                 
-    np.save('desidlas/tests/datafile/sightlines-16-1375.npy')
+    np.save('desidlas/tests/datafile/sightlines-16-1375.npy',sightlines)
     return sightlines
