@@ -29,7 +29,7 @@ def test_labels(spec):
     assert np.max(spec['coldensity'])>0, 'col_density labels are not correct'
     
 
-def test_datasets:
+def test_datasets(sightlines):
   dataset=make_datasets(sightlines,validate=True)
   for key in dataset.keys():
     spec=dataset[key]
@@ -39,7 +39,7 @@ def test_datasets:
 #for the spectra with S/N<3, we need to do the smoothing for the flux
 from desidlas.datasets.get_dataset import make_smoothdatasets
 
-def test_smoothdatasets:
+def test_smoothdatasets(sightlines):
   
   smoothdataset=make_smoothdatasets(sightlines,validate=True)
   
