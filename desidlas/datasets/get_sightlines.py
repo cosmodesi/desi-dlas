@@ -18,6 +18,10 @@ def get_sightlines(spectra,truth,zbest):
     """
     Insert DLAs manually into sightlines without DLAs or only choose sightlines with DLAs
     
+    spectra:path of spectra file in DESI(fits format), this is used for the information of spectra like flux,wavelength
+    truth:path of truth file in DESI(fits format), this is used for the information of DLAs
+    zbest:path of zbest file in DESI(fits format),this is used for the redshift of QSOs
+    
     Return
     ---------
     sightlines:list of `dla_cnn.data_model.sightline.Sightline` object
