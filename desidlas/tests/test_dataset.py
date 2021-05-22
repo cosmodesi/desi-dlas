@@ -40,8 +40,8 @@ def test_datasets(sightlines):
 
 def test_smoothdatasets(sightlines):
   
-  smoothdataset=make_smoothdatasets(sightlines,validate=True,smooth=True)
+  smoothdataset=make_datasets(sightlines,validate=True,smooth=True)
   
-  for key in dataset.keys():
-    spec=dataset[key]
+  for key in smoothdataset.keys():
+    spec=smootdataset[key]
     check_labels(spec)
