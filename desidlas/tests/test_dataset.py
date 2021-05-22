@@ -13,11 +13,11 @@ sightlines=np.load(sightline_path,allow_pickle = True,encoding='latin1')
 
 ##load modules in get_datasets.py
 from desidlas.datasets.get_dataset import make_datasets
-from desidlas.datasets.get_dataset import make_smoothdatasets
+#from desidlas.datasets.get_dataset import make_smoothdatasets
 
 #test the flux,lam and the labels in the dataset
 #labels:FLUX,lam,labels_classifier,labels_offset,col_density,wavelength_dlas,coldensity_dlas
-def test_labels(spec):
+def check_labels(spec):
   #check the flux and lam
   assert len(spec['FLUX'])>0 ,'no flux data'
   assert len(spec['lam'])>0 ,'no lam data'
@@ -30,19 +30,18 @@ def test_labels(spec):
     
 
 def test_datasets(sightlines):
-  dataset=make_datasets(sightlines,validate=True)
+  dataset=make_datasets(sightlines,validate=True,smooth=False)
   for key in dataset.keys():
     spec=dataset[key]
-    test_labels(spec)
+    check_labels(spec)
 
   
 #for the spectra with S/N<3, we need to do the smoothing for the flux
-from desidlas.datasets.get_dataset import make_smoothdatasets
 
 def test_smoothdatasets(sightlines):
   
-  smoothdataset=make_smoothdatasets(sightlines,validate=True)
+  smoothdataset=make_smoothdatasets(sightlines,validate=True,smooth=True)
   
   for key in dataset.keys():
     spec=dataset[key]
-    test_labels(spec)
+    check_labels(spec)
