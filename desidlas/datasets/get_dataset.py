@@ -12,7 +12,7 @@ def make_datasets(sightlines,validate=True):
     Parameters:
     -----------------------------------------------
     sightlines: list of 'dla_cnn.data_model.Sightline' object, the sightlines should be preprocessed.
-    validate: bool
+    validate: bool,optional, this decides whether to add labels in the dataset
     
     Returns
     -----------------------------------------------
@@ -34,7 +34,7 @@ def make_datasets(sightlines,validate=True):
             dataset[sightline.id]={'FLUX':flux,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
         else:
             sample_masks=select_samples_50p_pos_neg(sightline)
-            if sample_masks !=[]:
+            if len(sample_masks) >0:
                 flux=np.vstack([data_split[0][m] for m in sample_masks])
                 labels_classifier=np.hstack([data_split[1][m] for m in sample_masks])
                 labels_offset=np.hstack([data_split[2][m] for m in sample_masks])
@@ -52,15 +52,15 @@ def smooth_flux(flux):
     
     Return:
     -----------------------------------------------
-    flux_matrix:list, 4-dimension flux data
+    flux_matrix:list, 2-dimension flux data after smoothing
     
     """
     flux_matrix=[]
-    for sample in flux:#sample是片段flux
-                smooth3=signal.medfilt(sample,3)
-                smooth7=signal.medfilt(sample,7)
-                smooth15=signal.medfilt(sample,15)
-                flux_matrix.append(np.array([sample,smooth3,smooth7,smooth15]))
+    for sample in flux:
+        smooth3=signal.medfilt(sample,3)
+        smooth7=signal.medfilt(sample,7)
+        smooth15=signal.medfilt(sample,15)
+        flux_matrix.append(np.array([sample,smooth3,smooth7,smooth15]))
     return flux_matrix
     
 def make_smoothdatasets(sightlines,validate=True):
