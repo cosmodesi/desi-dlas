@@ -4,10 +4,14 @@ import scipy.signal as signal
 from desidlas.datasets.datasetting import split_sightline_into_samples,select_samples_50p_pos_neg,pad_sightline
 from desidlas.datasets.preprocess import label_sightline
 from desidlas.dla_cnn.spectra_utils import get_lam_data
+from pkg_resources import resource_filename
+import os
+from pathlib import Path
 
 #load the data for the test
 #this file is the output of get_sightlines.py, modules are tested in test_preprocess
-sightline_path='desidlas/tests/datafile/sightlines-16-1375.npy'
+datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
+sightline_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
 
 sightlines=np.load(sightline_path,allow_pickle = True,encoding='latin1')
 
