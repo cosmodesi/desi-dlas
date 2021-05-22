@@ -5,14 +5,15 @@ from desidlas.datasets.preprocess import label_sightline
 from desidlas.dla_cnn.spectra_utils import get_lam_data
 
 
-def make_datasets(sightlines,validate=True):
+def make_datasets(sightlines,validate=True,smooth=True):
     """
     Generate training set or validation set for DESI.
     
     Parameters:
     -----------------------------------------------
     sightlines: list of 'dla_cnn.data_model.Sightline' object, the sightlines should be preprocessed.
-    validate: bool,optional, this decides whether to add labels in the dataset
+    validate: bool,optional, this decides whether to add wavelength in the dataset
+    validate: bool,optional, this decides whether to smooth the flux. In our paper, we smooth the flux for spectra with SNR<3
     
     Returns
     -----------------------------------------------
@@ -31,7 +32,11 @@ def make_datasets(sightlines,validate=True):
             labels_offset=np.hstack([data_split[2]])
             col_density=np.hstack([data_split[3]])
             lam=np.vstack([data_split[4]])
-            dataset[sightline.id]={'FLUX':flux,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
+            if smooth:
+                flux_matrix=smooth_flux(flux)
+                dataset[sightline.id]={'FLUXMATRIX':flux_matrix,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
+            else:
+                dataset[sightline.id]={'FLUX':flux,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
         else:
             sample_masks=select_samples_50p_pos_neg(sightline)
             if len(sample_masks) >0:
@@ -39,7 +44,11 @@ def make_datasets(sightlines,validate=True):
                 labels_classifier=np.hstack([data_split[1][m] for m in sample_masks])
                 labels_offset=np.hstack([data_split[2][m] for m in sample_masks])
                 col_density=np.hstack([data_split[3][m] for m in sample_masks])
-            dataset[sightline.id]={'FLUX':flux,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
+                if smooth:
+                    flux_matrix=smooth_flux(flux)
+                    dataset[sightline.id]={'FLUXMATRIX':flux_matrix,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
+                else:
+                    dataset[sightline.id]={'FLUX':flux,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
     return dataset
         
 def smooth_flux(flux):
@@ -62,7 +71,8 @@ def smooth_flux(flux):
         smooth15=signal.medfilt(sample,15)
         flux_matrix.append(np.array([sample,smooth3,smooth7,smooth15]))
     return flux_matrix
-    
+
+'''
 def make_smoothdatasets(sightlines,validate=True):
     """
     Generate smoothed training set or validation set for DESI.
@@ -101,3 +111,4 @@ def make_smoothdatasets(sightlines,validate=True):
                 flux_matrix=smooth_flux(flux)
                 dataset[sightline.id]={'FLUXMATRIX':flux_matrix,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
     return dataset
+'''
