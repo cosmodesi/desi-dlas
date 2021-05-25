@@ -1,26 +1,13 @@
-from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
-from desidlas.datasets.DesiMock import DesiMock
-from desidlas.dla_cnn.defs import best_v
-import numpy as np
-import os
-from os.path import join
-from pkg_resources import resource_filename
 
+def get_sightlines(spectra,truth,zbest,outpath):
 
-datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
-#load spectra file for testing
-spectra= os.path.join(datafile_path, 'spectra', 'spectra-16-1375.fits')
-truth=os.path.join(datafile_path, 'spectra', 'truth-16-1375.fits')
-zbest=os.path.join(datafile_path, 'spectra', 'zbest-16-1375.fits')
-
-
-def get_sightlines(spectra,truth,zbest):
     """
     Insert DLAs manually into sightlines without DLAs or only choose sightlines with DLAs
     
     spectra:path of spectra file in DESI(fits format), this is used for the information of spectra like flux,wavelength
     truth:path of truth file in DESI(fits format), this is used for the information of DLAs
     zbest:path of zbest file in DESI(fits format),this is used for the redshift of QSOs
+    outpath: path to save the output file
     
     Return
     ---------
@@ -45,5 +32,5 @@ def get_sightlines(spectra,truth,zbest):
                 rebin(sightline, best_v['b'])
                 sightlines.append(sightline)
                 
-    np.save('desidlas/tests/datafile/sightlines-16-1375.npy',sightlines)
+    np.save(outpath,sightlines)
     return sightlines
