@@ -1,10 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Apr  2 22:22:42 2020
 
-@author: samwang
-"""
 """ TensorFlow Models for DLA finder"""
 ''' new model with smooth training, this method can improve the DLA claasification on low signal-to-noise '''
 
@@ -26,7 +20,7 @@ tf.constant:generating constant
 tf.nn.conv2d(input, filter, strides, padding, use_cudnn_on_gpu=None, name=None)
 """
 import tensorflow as tf 
-#from training import set_datasize
+import math
 
 def weight_variable(shape):
     
@@ -100,7 +94,7 @@ def variable_summaries(var, name, collection):
 
 def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     
-    import math
+    
     """
     This is Model_v5 from SDSS
     
@@ -109,6 +103,8 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     ----------
     hyperparameters：use the hyperparameters in dla_cnn/models/model_gensample_v7.1_hyperparams.json
     Returns
+    train_step_ABC: the minimized result for three loss functions
+    tfo: tensorflow objects
     -------
 ●
     """
@@ -307,8 +303,6 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     #rmse_offset, y_nn_coldensity, rmse_coldensity
 
 hyperparameters={'fc2_3_n_neurons': 150, 'pool3_stride': 4, 'conv3_kernel': 16, 'conv1_stride': 3, 'pool1_stride': 4, 'conv3_filters': 96, 'conv2_stride': 1, 'conv1_filters': 100, 'fc2_1_n_neurons': 200, 'dropout_keep_prob': 0.98, 'pool2_kernel': 6, 'pool3_kernel': 6, 'conv2_filters': 96, 'l2_regularization_penalty': 0.005, 'pool2_stride': 4, 'conv2_kernel': 16, 'fc1_n_neurons': 350, 'learning_rate': 2e-05, 'batch_size': 700, 'conv1_kernel': 32, 'training_iters': 1000000, 'fc2_2_n_neurons': 350, 'pool1_kernel': 7, 'conv3_stride': 1, 'INPUT_SIZE': 400}
-import tensorflow as tf
-import math
 build_model(hyperparameters)
 #print(train_step_ABC)
 #import linetools
