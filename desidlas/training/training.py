@@ -57,7 +57,6 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):
 
     """
     MAX_BATCH_SIZE = 40000.0
-
     classifier_accuracy = 0.0
     classifier_loss_value = 0.0
     result_rmse_offset = 0.0
