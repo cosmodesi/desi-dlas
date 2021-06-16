@@ -12,8 +12,6 @@ import tensorflow as tf
 
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
-#tf.compat.v1.disable_eager_execution()
-#init = tf.compat.v1.global_variables_initializer()
 
 from model import build_model
 
@@ -24,10 +22,10 @@ config = ConfigProto()
 config.gpu_options.allow_growth = True
 config.allow_soft_placement=True
 config.log_device_placement = True
-#session = InteractiveSession(config=config)
 
 
 tensor_regex = re.compile('.*:\d*')
+
 # Get a tensor by name, convenience method
 def t(tensor_name):
     tensor_name = tensor_name+":0" if not tensor_regex.match(tensor_name) else tensor_name
@@ -37,15 +35,15 @@ def t(tensor_name):
 # Called from train_ann to perform a test of the train or test data, needs to separate pos/neg to get accurate #'s
 def train_ann_test_batch(sess, ixs, data, summary_writer=None):  
     #inputs: label_classifier, label_offset, label_coldensity
-     """
+    """
     Perform training and estimate accuracy,RMSE after every iteration training
-
+    
     Parameters
     ----------
     sess:tf.Session object
     ixs:np.ndarray, indices for each window in the dataset
     data:sightline data in training and testing dataset
-
+    
     Returns
     -------
     classifier_accuracy: the classification accuracy after this training iteration
@@ -275,7 +273,7 @@ def calc_normalized_score(best_accuracy, best_offset_rmse, best_coldensity_rmse)
     normalized_score = (1 - best_accuracy - mean_best_accuracy) / std_best_accuracy + \
                        (best_offset_rmse - mean_best_offset_rmse) / std_best_offset_rmse + \
                        (best_coldensity_rmse - mean_best_coldensity_rmse) / std_best_coldensity_rmse
-    #
+    
     return normalized_score
 
 
