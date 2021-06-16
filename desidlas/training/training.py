@@ -146,13 +146,13 @@ def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, 
 
     Returns
     -------
-    best_accuracy
-    test_accuracy
-    np.mean(loss_value)
-    best_offset_rmse
-    result_rmse_offset
-    best_density_rmse
-    result_rmse_coldensity
+    best_accuracy:the best classification accuracy during the training
+    test_accuracy: the final test accuracy
+    np.mean(loss_value):mean value of the loss function
+    best_offset_rmse: the minimum value of offset RMSE
+    result_rmse_offset:the final value of offset RMSE
+    best_density_rmse:the minimum value of column density RMSE
+    result_rmse_coldensity:the final value of column density RMSE
 
     """
     training_iters = hyperparameters['training_iters']
