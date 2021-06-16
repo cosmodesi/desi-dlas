@@ -102,6 +102,9 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     Parameters
     ----------
     hyperparameters：use the hyperparameters in dla_cnn/models/model_gensample_v7.1_hyperparams.json
+    INPUT_SIZE:pixels numbers for each window , 400 for high SNR and 600 for low SNR
+    matrix_size:1 if without smoothing, 4 if smoothing for low SNR
+    
     Returns
     train_step_ABC: the minimized result for three loss functions
     tfo: tensorflow objects
@@ -298,11 +301,4 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     # tb_summaries = tf.merge_all_summaries()
 
     return train_step_ABC, tfo
- #, accuracy , loss_classifier, loss_offset_regression, loss_coldensity_regression, \
-    #x, label_classifier, label_offset, label_coldensity, keep_prob, prediction, output_classifier, y_nn_offset, \
-    #rmse_offset, y_nn_coldensity, rmse_coldensity
 
-hyperparameters={'fc2_3_n_neurons': 150, 'pool3_stride': 4, 'conv3_kernel': 16, 'conv1_stride': 3, 'pool1_stride': 4, 'conv3_filters': 96, 'conv2_stride': 1, 'conv1_filters': 100, 'fc2_1_n_neurons': 200, 'dropout_keep_prob': 0.98, 'pool2_kernel': 6, 'pool3_kernel': 6, 'conv2_filters': 96, 'l2_regularization_penalty': 0.005, 'pool2_stride': 4, 'conv2_kernel': 16, 'fc1_n_neurons': 350, 'learning_rate': 2e-05, 'batch_size': 700, 'conv1_kernel': 32, 'training_iters': 1000000, 'fc2_2_n_neurons': 350, 'pool1_kernel': 7, 'conv3_stride': 1, 'INPUT_SIZE': 400}
-build_model(hyperparameters)
-#print(train_step_ABC)
-#import linetools
