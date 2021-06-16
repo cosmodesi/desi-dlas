@@ -118,13 +118,13 @@ def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, 
 
     Parameters
     ----------
-    hyperparameters
-    train_dataset
-    test_dataset
+    hyperparameters:hyperparameters for the CNN model structure
+    train_dataset: the dataset used for training
+    test_dataset: the dataset used for testing
     save_filename
     load_filename
     tblogs
-    TF_DEVICE
+    TF_DEVICE: use which gpu to train, default is '/gpu:1'
 
     Returns
     -------
@@ -149,14 +149,12 @@ def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, 
             # Restore or initialize model
             if load_filename is not None:
                 tf.train.Saver().restore(sess, load_filename+".ckpt")
-                #print("Model loaded from checkpoint: %s"%load_filename)
+                
             else:
-                #print("Initializing variables")
-                #sess.run(tf.global_variables_initializer())
+               
                 sess.run(tf.compat.v1.global_variables_initializer())
 
-            #summary_writer = tf.train.SummaryWriter(tblogs, sess.graph)
-            #summary = tf.summary.FileWriter(tblogs, sess.graph)
+            
             summary_writer = tf.summary.create_file_writer(tblogs)
 
             for i in range(training_iters):
@@ -174,7 +172,7 @@ def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, 
                     result_rmse_coldensity, result_loss_coldensity_regression \
                         = train_ann_test_batch(sess, np.random.permutation(train_dataset.fluxes.shape[0])[0:10000],
                                                train_dataset.data, summary_writer=summary_writer)
-                        # = train_ann_test_batch(sess, batch_ix, data_train)  # Note this batch_ix must come from train_step_ABC
+                       
                     
                     print("step {:06d}, classify-offset-density acc/loss - RMSE/loss      {:0.3f}/{:0.3f} - {:0.3f}/{:0.3f} - {:0.3f}/{:0.3f}".format(
                           i, train_accuracy, float(np.mean(loss_value)), result_rmse_offset,
