@@ -35,7 +35,27 @@ def t(tensor_name):
 
 
 # Called from train_ann to perform a test of the train or test data, needs to separate pos/neg to get accurate #'s
-def train_ann_test_batch(sess, ixs, data, summary_writer=None):    #inputs: label_classifier, label_offset, label_coldensity
+def train_ann_test_batch(sess, ixs, data, summary_writer=None):  
+    #inputs: label_classifier, label_offset, label_coldensity
+     """
+    Perform training
+
+    Parameters
+    ----------
+    sess:
+    ixs:
+    data:
+
+    Returns
+    -------
+    classifier_accuracy
+    classifier_loss_value
+    result_rmse_offset
+    result_loss_offset_regression
+    result_rmse_coldensity
+    result_loss_coldensity_regression
+
+    """
     MAX_BATCH_SIZE = 40000.0
 
     classifier_accuracy = 0.0
@@ -80,8 +100,7 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):    #inputs: labe
         result_rmse_coldensity += run[4] * weight_wrt_pos_samples
         result_loss_coldensity_regression += run[5] * weight_wrt_pos_samples
 
-        #for i in range(7, len(tensors)):
-            #summary_writer.add_summary(run[i], run[6])
+       
 
     # neg
     for neg_ix in neg_ixs_split:
@@ -103,8 +122,7 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):    #inputs: labe
         result_loss_offset_regression += run[3] * weight_wrt_total_samples
 
 
-        #for i in range(5,len(tensors)):
-            #summary_writer.add_summary(run[i], run[4])
+        
 
     return classifier_accuracy, classifier_loss_value, \
            result_rmse_offset, result_loss_offset_regression, \
@@ -121,13 +139,20 @@ def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, 
     hyperparameters:hyperparameters for the CNN model structure
     train_dataset: the dataset used for training
     test_dataset: the dataset used for testing
-    save_filename
-    load_filename
-    tblogs
+    save_filename: the path to save the model file, ckpt format
+    load_filename: load a model file,none for initial training
+    tblogs : a path to save tblog files necessary for tf.summary
     TF_DEVICE: use which gpu to train, default is '/gpu:1'
 
     Returns
     -------
+    best_accuracy
+    test_accuracy
+    np.mean(loss_value)
+    best_offset_rmse
+    result_rmse_offset
+    best_density_rmse
+    result_rmse_coldensity
 
     """
     training_iters = hyperparameters['training_iters']
@@ -205,6 +230,18 @@ def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, 
                    best_density_rmse, result_rmse_coldensity
 
 def save_checkpoint(sess, save_filename):
+    """
+    save model file
+
+    Parameters
+    ----------
+    sess:tf.Session object
+    save_filename:the path to save the model
+
+    Returns
+    -------
+
+    """
     if save_filename is not None:
         tf.compat.v1.train.Saver().save(sess, save_filename + ".ckpt")
         with open(checkpoint_filename + "_hyperparams.json", 'w') as fp:
@@ -338,19 +375,17 @@ if __name__ == '__main__':
         [6,4,             1, 2, 3, 4, 5, 6, 7, 8]
     ]
 
-    # Random permutation of parameters out some artibrarily long distance
-    #r = np.random.permutation(1000)
-
+    
     # Write out CSV header
     os.remove(batch_results_file) if os.path.exists(batch_results_file) else None
     with open(batch_results_file, "a") as csvoutput:
         csvoutput.write("iteration_num,normalized_score,best_accuracy,last_accuracy,last_objective,best_offset_rmse,last_offset_rmse,best_coldensity_rmse,last_coldensity_rmse," + ",".join(parameter_names) + "\n")
 
 
-    #hyperparameters = [parameters[i][0] for i in range(len(parameters))]
+    
     
     #hyperparameter search
-    #parameter_file=open('901parameterrecord.txt','a')
+   
     hyperparameters = {}
     #choose the hyperparameters
     for k in range(0,len(parameter_names)):
