@@ -38,22 +38,22 @@ def t(tensor_name):
 def train_ann_test_batch(sess, ixs, data, summary_writer=None):  
     #inputs: label_classifier, label_offset, label_coldensity
      """
-    Perform training
+    Perform training and estimate accuracy,RMSE after every iteration training
 
     Parameters
     ----------
-    sess:
-    ixs:
-    data:
+    sess:tf.Session object
+    ixs:np.ndarray, indices for each window in the dataset
+    data:sightline data in training and testing dataset
 
     Returns
     -------
-    classifier_accuracy
-    classifier_loss_value
-    result_rmse_offset
-    result_loss_offset_regression
-    result_rmse_coldensity
-    result_loss_coldensity_regression
+    classifier_accuracy: the classification accuracy after this training iteration
+    classifier_loss_value: the classification RMSE after this training iteration
+    result_rmse_offset:the offset RMSE after this training iteration
+    result_loss_offset_regression:the offset loss function value after this training iteration
+    result_rmse_coldensity:the column density RMSE after this training iteration
+    result_loss_coldensity_regression:the column density loss function after this training iteration
 
     """
     MAX_BATCH_SIZE = 40000.0
