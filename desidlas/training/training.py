@@ -256,12 +256,13 @@ def calc_normalized_score(best_accuracy, best_offset_rmse, best_coldensity_rmse)
 
     Parameters
     ----------
-    best_accuracy
-    best_offset_rmse
-    best_coldensity_rmse
+    best_accuracy:the highest classification accuracy during the training
+    best_offset_rmse:the minimum offset RMSE during the training
+    best_coldensity_rmse:the minimum column density during the training
 
-    Returns
+    Returns:
     -------
+    normalized_score:used to select hyperparameters. A better hyperparameter combine will have a smaller normalized_score
 
     """
     # These mean & std dev are used to normalize the score from all 3 loss functions for hyperparam optimize
