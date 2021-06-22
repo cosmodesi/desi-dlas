@@ -1,6 +1,6 @@
 
 """ TensorFlow Models for DLA finder"""
-''' new model with smooth training, this method can improve the DLA claasification on low signal-to-noise '''
+''' new model with smooth training, this method can improve the DLA clasification on low signal-to-noise '''
 
 """
 0.  Convert the model to TF 2.1
@@ -26,8 +26,12 @@ def weight_variable(shape):
     
     """
     Generating random number according to the tensor shape,The standard deviation is 0.1，define a variable function
-    parameter_shape:the shape of the output tensor，A 1-D integer Tensor or Python array
-    return:tf.Variable (initial_value is random number）A tensor of the specified shape filled with random truncated normal values.
+    Parameters:
+    ----------
+    shape:the shape of the output tensor，A 1-D integer Tensor or Python array
+    return:
+    ----------
+    tf.Variable (initial_value is random number）A tensor of the specified shape filled with random truncated normal values.
     """
     initial = tf.random.truncated_normal(shape, stddev=0.1) #Outputs random values from a truncated normal distribution，shape:The shape of the output tensor.stddev:The standard deviation of the normal distribution, before truncation
     return tf.Variable(initial)
@@ -37,8 +41,12 @@ def bias_variable(shape):
     
     """
     Generating constant 0 according to the tensor shape,define a variable function
-    parameter_shape:the shape of the output tensor，A 1-D integer Tensor or Python array
-    return:tf.Variable（initial_value is a constant）A tensor of the specified shape filled with random truncated normal values.
+    Parameters:
+    ------------
+    shape:the shape of the output tensor，A 1-D integer Tensor or Python array
+    Return:
+    ------------
+    tf.Variable（initial_value is a constant）A tensor of the specified shape filled with random truncated normal values.
     """
     initial = tf.constant(0.0, shape=shape) #generating constant
     return tf.Variable(initial)
@@ -48,11 +56,14 @@ def conv1d(x, W, s):
     
     """
     achieve the convolution
-    input:
-    parameter_x:the input image need to do the convolution,must a tensor format
-    parameter_W:the core of the CNN,a tensor format
-    parameter_s:the batch_size on each dimension,a one-dimensional vector
-    return:tf.nn.conv2d(padding defines which convolution method will be used,"SAME"or"VALID")
+    Parameters:
+    ------------
+    x:the input image need to do the convolution,must a tensor format
+    W:the core of the CNN,a tensor format
+    s:the batch_size on each dimension,a one-dimensional vector
+    Return:
+    ------------
+    tf.nn.conv2d(padding defines which convolution method will be used,"SAME"or"VALID")
     """
     return tf.nn.conv2d(input=x, filters=W, strides=s, padding='SAME')#tf.nn.conv2d(input, filter, strides, padding, use_cudnn_on_gpu=None, name=None)
 
@@ -61,13 +72,16 @@ def pooling_layer_parameterized(pool_method, h_conv, pool_kernel, pool_stride):
     
     """
     define pooling parameter,which method should be used
-    input: pool_method 1 or 2
-    parameter_pool_method:1 or 2,determines use max_pool or avg_pool
-    parameter_h_conv:the input need to be pooled,shape:[batch, height, width, channels]
-    parameter_pool_kernel:int format,the height of the pool window.     ksize:[1,height,width,1],1-D CNN,width=1
-    parameter_pool_stride:int format,size each window slides on each dimension.    strides:[1,stride,stride,1]
-    return: pool_method=1,use the max set
-            pool_method=2,use the average set
+    Parameters:
+    ------------
+    pool_method:1 or 2,determines use max_pool or avg_pool
+    h_conv:the input need to be pooled,shape:[batch, height, width, channels]
+    pool_kernel:int format,the height of the pool window.     ksize:[1,height,width,1],1-D CNN,width=1
+    pool_stride:int format,size each window slides on each dimension.    strides:[1,stride,stride,1]
+    Return:
+    ------------
+    pool_method=1,use the max set
+    pool_method=2,use the average set
     """
     if pool_method == 1:
         return tf.nn.max_pool2d(input=h_conv, ksize=[1, pool_kernel, 1, 1], strides=[1, pool_stride, 1, 1], padding='SAME')
@@ -76,6 +90,15 @@ def pooling_layer_parameterized(pool_method, h_conv, pool_kernel, pool_stride):
          
 def variable_summaries(var, name, collection):
    #Attach a lot of summaries to a Tensor.
+   #Add a variable to the collection, which can be used later when the model is called
+   '''
+   Parameters:
+   ------------
+   var: the variable
+   name: name of the variables
+   collection: name of the collection
+   '''
+    pool_method:1 or 2,determines use max_pool or avg_pool
     with tf.compat.v1.name_scope('summaries') as r:
         mean = tf.reduce_mean(input_tensor=var)
         tf.compat.v1.add_to_collection(collection,tf.compat.v1.summary.scalar('mean/'+name,mean))
@@ -101,9 +124,9 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     three conv layers,three pool layers,two full connected layers
     Parameters
     ----------
-    hyperparameters：use the hyperparameters in dla_cnn/models/model_gensample_v7.1_hyperparams.json
-    INPUT_SIZE:pixels numbers for each window , 400 for high SNR and 600 for low SNR
-    matrix_size:1 if without smoothing, 4 if smoothing for low SNR
+    hyperparameters: use the hyperparameters in dla_cnn/models/model_gensample_v7.1_hyperparams.json
+    INPUT_SIZE: pixels numbers for each window , 400 for high SNR and 600 for low SNR
+    matrix_size: 1 if without smoothing, 4 if smoothing for low SNR
     
     Returns
     train_step_ABC: the minimized result for three loss functions
@@ -134,14 +157,11 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     pool1_stride = hyperparameters['pool1_stride']
     pool2_stride = hyperparameters['pool2_stride']
     pool3_stride = hyperparameters['pool3_stride']
-    pool1_method = 1        # Removed from hyperparameter search because it never chose anything but this method
+    pool1_method = 1        
     pool2_method = 1
     pool3_method = 1
 
-    #INPUT_SIZE = 600
-    #matrix_size=4
-     #hyperparameters['INPUT_SIZE'] # the pixel of input image,need a new hyperparameter
-     #matrix_size:smoothed data input, change the input training data to 600*4 scale . without smoothing , the matrix_size is 1
+    
     tfo = {}    # Tensorflow objects
 
 
@@ -161,10 +181,12 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     # I converted "tf.placeholder" to "tf.Variable"
 
     tf.compat.v1.disable_eager_execution()
-
+    
+    #
     x = tf.compat.v1.placeholder(tf.float32, shape=[None,matrix_size, INPUT_SIZE], name='x')
     y = tf.compat.v1.placeholder(tf.float32, shape=[None, matrix_size], name='x')
-
+    
+    #
     label_classifier = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_classifier')
     label_offset = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_offset')
     label_coldensity = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_coldensity')
@@ -279,19 +301,27 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
         name='loss_coldensity_regression')
 
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
-
+    
+    #combine three loss functions(for classification, offset and column density) to minimize
     cost_all_samples_lossfns_AB = loss_classifier + loss_offset_regression
     cost_pos_samples_lossfns_ABC = loss_classifier + loss_offset_regression + loss_coldensity_regression
-    # train_step_AB = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost_all_samples_lossfns_AB, global_step=global_step, name='train_step_AB')
+    
+    #minimize the total loss fucntion
     train_step_ABC = optimizer.minimize(cost_pos_samples_lossfns_ABC, global_step=global_step, name='train_step_ABC')
-    # train_step_C = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(loss_coldensity_regression, global_step=global_step, name='train_step_C')
+    
+    #get the accuracy, offset and column density results
+    # tf.sigmoid: make output within the range[0,1]
     output_classifier = tf.sigmoid(y_nn_classifier, name='output_classifier')
     prediction = tf.round(output_classifier, name='prediction')
+    # tf.equal: True if prediction = label_classifier, False if not equal
     correct_prediction = tf.equal(prediction, label_classifier)
+    # get the mean value of the prediction tensor as the accuracy
     accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, tf.float32), name='accuracy')
     rmse_offset = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(tf.subtract(y_nn_offset,label_offset))), name='rmse_offset')
     rmse_coldensity = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(tf.subtract(y_nn_coldensity,label_coldensity))), name='rmse_coldensity')
-
+    
+    # add the element and their value into a summary list
+    # They can be used later when the model is called
     variable_summaries(loss_classifier, 'loss_classifier', 'SUMMARY_A')
     variable_summaries(loss_offset_regression, 'loss_offset_regression', 'SUMMARY_B')
     variable_summaries(loss_coldensity_regression, 'loss_coldensity_regression', 'SUMMARY_C')
