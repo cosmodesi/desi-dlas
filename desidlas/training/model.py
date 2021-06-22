@@ -174,7 +174,7 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     #tf.compat.v1.placeholder:claim a tensor that needs to be filled (the data type, shape and name)
     #x: the empty tensor need to be filled with the input data
     x = tf.compat.v1.placeholder(tf.float32, shape=[None,matrix_size, INPUT_SIZE], name='x')
-    y = tf.compat.v1.placeholder(tf.float32, shape=[None, matrix_size], name='x')
+   
     
     #claim the tensor for three labels
     label_classifier = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_classifier')
