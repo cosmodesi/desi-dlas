@@ -165,28 +165,18 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     tfo = {}    # Tensorflow objects
 
 
-    
-
-    """
-
-    x = tf.Variable(tf.ones(shape=[None, INPUT_SIZE]), name='x')
-    label_classifier = tf.Variable(tf.zeros(shape=[None]), name='label_classifier')
-    label_offset = tf.Variable(tf.zeros(shape=[None]), name='label_offset')
-    label_coldensity = tf.Variable(tf.zeros(shape=[None]), name='label_coldensity')
-    keep_prob = tf.Variable( name='keep_prob')
-    global_step = tf.Variable(0, name='global_step', trainable=False)
-
-    """
+  
 
     # I converted "tf.placeholder" to "tf.Variable"
 
     tf.compat.v1.disable_eager_execution()
     
-    #
+    #tf.compat.v1.placeholder:claim a tensor that needs to be filled (the data type, shape and name)
+    #x: the empty tensor need to be filled with the input data
     x = tf.compat.v1.placeholder(tf.float32, shape=[None,matrix_size, INPUT_SIZE], name='x')
     y = tf.compat.v1.placeholder(tf.float32, shape=[None, matrix_size], name='x')
     
-    #
+    #claim the tensor for three labels
     label_classifier = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_classifier')
     label_offset = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_offset')
     label_coldensity = tf.compat.v1.placeholder(tf.float32, shape=[None], name='label_coldensity')
