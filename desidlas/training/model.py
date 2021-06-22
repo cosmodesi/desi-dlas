@@ -282,7 +282,7 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
                                     l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
                                                                  tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_2)),
                                     name='loss_offset_regression')
-    epsilon = 1e-6
+    epsilon = 1e-6 # the small value safe from 32-bit floating point rounding error, this is used in column density loss fucntion
     loss_coldensity_regression = tf.reduce_sum(
         input_tensor=tf.multiply(tf.square(y_nn_coldensity - label_coldensity),
                     tf.compat.v1.div(label_coldensity,label_coldensity+epsilon)) +
