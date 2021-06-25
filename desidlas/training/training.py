@@ -29,6 +29,15 @@ tensor_regex = re.compile('.*:\d*')
 
 # Get a tensor by name, convenience method
 def t(tensor_name):
+    '''
+    Parameters
+    ----------
+    tensor_name: str, the name for each tensor
+    
+    Returns
+    ----------
+    tf.compat.v1.get_default_graph().get_tensor_by_name(tensor_name):establish a tensor, make a default graph according to the tensor name
+    '''
     tensor_name = tensor_name+":0" if not tensor_regex.match(tensor_name) else tensor_name
     return tf.compat.v1.get_default_graph().get_tensor_by_name(tensor_name)
 
