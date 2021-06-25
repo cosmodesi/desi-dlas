@@ -15,13 +15,14 @@ ops.reset_default_graph()
 
 from model import build_model
 
+#Parameter configuration for tensorflow session
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
 
 config = ConfigProto()
-config.gpu_options.allow_growth = True
-config.allow_soft_placement=True
-config.log_device_placement = True
+config.gpu_options.allow_growth = True #Dynamically apply for video memory, slowly increase gpu capacity from less to more
+config.allow_soft_placement=True  #Allow tensorflow to automatically allocate devices
+config.log_device_placement = True #Record the log of which device each node is assigned to, for the convenience of debugging
 
 
 tensor_regex = re.compile('.*:\d*')
