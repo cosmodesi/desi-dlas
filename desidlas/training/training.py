@@ -88,11 +88,11 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):
         tensors = [t('accuracy'), t('loss_classifier'), t('rmse_offset'), t('loss_offset_regression'),
                         t('rmse_coldensity'), t('loss_coldensity_regression'), t('global_step')]
         if summary_writer is not None:
-            tensors.extend(tf.compat.v1.get_collection('SUMMARY_A'))
+            tensors.extend(tf.compat.v1.get_collection('SUMMARY_A')) # adding summary list to every tensor, used to save the training log
             tensors.extend(tf.compat.v1.get_collection('SUMMARY_B'))
             tensors.extend(tf.compat.v1.get_collection('SUMMARY_C'))
             tensors.extend(tf.compat.v1.get_collection('SUMMARY_shared'))
-
+        #start training, runing the graph in tensorflow according to the tensors and data
         run = sess.run(tensors, feed_dict={t('x'):                data['fluxes'][pos_ix],
                                            t('label_classifier'): data['labels_classifier'][pos_ix],
                                            t('label_offset'):     data['labels_offset'][pos_ix],
