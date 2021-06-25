@@ -53,6 +53,7 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):
     sess:tf.Session object
     ixs:np.ndarray, indices for each window in the dataset
     data:sightline data in training and testing dataset
+    summary_writer: whether to save the training log file at given path, default is true
     
     Returns
     -------
