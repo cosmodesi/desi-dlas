@@ -9,6 +9,8 @@ import math
 import re, os, traceback, sys, json
 import argparse
 import tensorflow as tf
+import os
+from pathlib import Path
 
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
@@ -294,16 +296,24 @@ if __name__ == '__main__':
     # Execute batch mode
     #
     from Dataset import Dataset
-
+    
+    datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
+    traindata_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
+    testdata_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
+    
+    save_path=os.path.join(resource_filename('desidlas', 'training'), 'model_files')
+    savemodel_path=os.path.join(save_path, 'train_highsnr','current')
+    savebatch_path=os.path.join(save_path, 'train_highsnr','batch_results.csv')
+    
     DEFAULT_TRAINING_ITERS = 100000 #30000
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--hyperparamsearch', help='Run hyperparam search', required=False, action='store_true', default=False)
-    parser.add_argument('-o', '--output_file', help='Hyperparam csv result file location', required=False, default='batch_results.csv')
+    parser.add_argument('-o', '--output_file', help='Hyperparam csv result file location', required=False, default=savebatch_path)
     parser.add_argument('-i', '--iterations', help='Number of training iterations', required=False, default=DEFAULT_TRAINING_ITERS)
     parser.add_argument('-l', '--loadmodel', help='Specify a model name to load', required=False, default=None)
-    parser.add_argument('-c', '--checkpoint_file', help='Name of the checkpoint file to save (without file extension)', required=False, default="train_1016snr5smooth/current") #../models/training/current
-    parser.add_argument('-r', '--train_dataset_filename', help='File name of the training dataset without extension', required=False, default="/home/bwang/data/smoothtrain/16804-snr5dataset.npy")
-    parser.add_argument('-e', '--test_dataset_filename', help='File name of the testing dataset without extension', required=False, default="/home/bwang/data/smoothtrain/2181-snr5dataset.npy")
+    parser.add_argument('-c', '--checkpoint_file', help='Name of the checkpoint file to save (without file extension)', required=False, default=savemodel_path) #../models/training/current
+    parser.add_argument('-r', '--train_dataset_filename', help='File name of the training dataset without extension', required=False, default=traindata_path)
+    parser.add_argument('-e', '--test_dataset_filename', help='File name of the testing dataset without extension', required=False, default=testdata_path)
     parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=600)
     parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=4)
     args = vars(parser.parse_args())
