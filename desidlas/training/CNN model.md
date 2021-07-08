@@ -11,7 +11,7 @@ In this model, three outputs are produced: classification, localization, and col
 
 The loss function for DLA classification (![](http://latex.codecogs.com/svg.latex?\mathcal{L}_{c})) in a sample is the standard cross-entropy loss function
 
-where ![](http://latex.codecogs.com/svg.latex?y_{c}) is the ground truth classification label ( 1 if DLA; 0 otherwise) for the sample; and ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) is the model’s pre- dicted classification ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) is in the range (0,1) where ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) > 0.5 indicates a positive DLA classification and ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) < 0.5 negative classification).
+where ![](http://latex.codecogs.com/svg.latex?y_{c}) is the ground truth classification label ( 1 if DLA; 0 otherwise) for the sample; and ![](http://latex.codecogs.com/svg.latex?\hat y_{c}) is the model’s pre- dicted classification ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) is in the range (0,1) where ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) > 0.5 indicates a positive DLA classification and ![](http://latex.codecogs.com/svg.latex?$\\hat y_{c}$) < 0.5 negative classification).
 
 ## Parameter set
 The parameters deciding the size of each layer is shown in parameterset.py 
