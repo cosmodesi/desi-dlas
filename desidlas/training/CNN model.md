@@ -9,8 +9,9 @@ We do not actually input all sightline pixels into our network because this woul
 ## Loss Function
 In this model, three outputs are produced: classification, localization, and column density estimation. So there are three individual loss functions.
 
-The loss function for DLA classification (![](http://latex.codecogs.com/svg.latex?\mathcal{L})) in a sample is the standard cross-entropy loss function
+The loss function for DLA classification (![](http://latex.codecogs.com/svg.latex?\mathcal{L_{c}})) in a sample is the standard cross-entropy loss function
 
+where ![](http://latex.codecogs.com/svg.latex?y_{c}) is the ground truth classification label ( 1 if DLA; 0 otherwise) for the sample; and yˆc is the model’s pre- dicted classification (yˆc is in the range (0,1) where yˆc > 0.5 indicates a positive DLA classification and yˆc < 0.5 negative classification).
 ## Parameter set
 The parameters deciding the size of each layer is shown in parameterset.py 
 
