@@ -2,7 +2,13 @@
 def get_sightlines(spectra,truth,zbest,outpath):
 
     """
-    Insert DLAs manually into sightlines without DLAs or only choose sightlines with DLAs
+    Read Fits file and preprocess the sightlines
+    Use the DesiMock class to read fits file and perform pre-processing work such as rebinning, normalizing, and calculating the signal-to-noise ratio(S/N),
+    then store the pre-processed spectra data into the Sighline class. 
+    Based on the dataset we want to generate, these filters can be changed. Here lists the filters to spectra:
+    spectra with z<2.33 are filtered
+    spectra with S/N <1 are filtered
+    only use the blue band in this sightline
     
     spectra:path of spectra file in DESI(fits format), this is used for the information of spectra like flux,wavelength
     truth:path of truth file in DESI(fits format), this is used for the information of DLAs
