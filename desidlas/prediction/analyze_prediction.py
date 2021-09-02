@@ -1,13 +1,25 @@
 
 import numpy as np 
-#from dla_cnn.data_model.Sightline import Sightline
-from dla_cnn.data_model.Prediction import Prediction
-from dla_cnn.spectra_utils import get_lam_data
-from dla_cnn.desi.training_sets import split_sightline_into_samples
+#from desidlas.data_model.Sightline import Sightline
+from desidlas.data_model.Prediction import Prediction
+from desidlas.dla_cnn.spectra_utils import get_lam_data
+from desidlas.datasets.datasetting import split_sightline_into_samples
 from astropy.table import Table
 import scipy.signal as signal
 def compute_peaks(sightline,PEAK_THRESH):
-                      # Threshold to accept a peak0.2
+    """
+    Calculate the peak for offsets value
+    
+    Parameters:
+    -----------------------------------------------
+    sightline: 'dla_cnn.data_model.Sightline' object
+    PEAK_THRESH: float, the threshold to accept a peak=0.2
+    
+    Returns
+    -----------------------------------------------
+    sightline
+    
+    """
     PEAK_SEPARATION_THRESH = 0.1        # Peaks must be separated by a valley at least this low
 
     # Translate relative offsets to histogram
@@ -58,7 +70,25 @@ def compute_peaks(sightline,PEAK_THRESH):
     return sightline
 
 def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH):
-    for i in range(0,len(pred)):#删去pred为0处的offset，防止影响offset hist的判断
+    """
+    Gnerate DLA catalog for each sightline
+    
+    Parameters:
+    -----------------------------------------------
+    sightline: 'dla_cnn.data_model.Sightline' object
+    pred:list, label for every window, 0 means no DLA in this window and 1 means this window has a DLA
+    conf:list, [0,1]confidence level, label for every window, pred is 0 when conf is below the critical value (0.5 default), pred is 1 when conf is above the critical value
+    offset:list, [-60,+60] , label for every window, pixel numbers between DLA center and the window center
+    coldensity:list, label for every window, the estimated NHI column density
+    PEAK_THRESH: float, the threshold to accept a peak=0.2
+    
+    Returns
+    -----------------------------------------------
+    dla_tbl: 'astropy.table.Table' object
+    
+    """
+    #delete the offset value when pred=0
+    for i in range(0,len(pred)):
         if (pred[i]==0):#or(real_classifier[i]==-1):
             offset[i]=0
     sightline.prediction = Prediction(loc_pred=pred, loc_conf=conf, offsets=offset, density_data=coldensity)
