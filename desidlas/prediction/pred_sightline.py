@@ -1,6 +1,6 @@
 import numpy as np 
 import matplotlib.pyplot as plt
-from dla_cnn.desi.analyze_prediction import analyze_pred
+from desidlas.prediction.analyze_prediction import analyze_pred
 from astropy.table import Table, vstack,hstack
 
 def save_pred(sightlines,pred,PEAK_THRESH,level,filename=None):
