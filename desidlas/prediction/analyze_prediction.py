@@ -1,4 +1,4 @@
-
+#this module is used to combine the model's predictions for each pixel into the one sightline with several DLAs' predictions.
 import numpy as np 
 #from desidlas.data_model.Sightline import Sightline
 from desidlas.data_model.Prediction import Prediction
