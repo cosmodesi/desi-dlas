@@ -135,6 +135,7 @@ class DesiMock:
             overlap_error_b = sightline.error[blfbound:self.split_point_br]
             overlap_error_r = sightline.error[self.split_point_br:rrgbound+1]
             
+            #Use the value with the smaller error in the overlapping part
             test_1 = overlap_error_b<overlap_error_r
             overlap_flux_1 = np.array([overlap_flux_b[i] if test_1[i] else overlap_flux_r[i] for i in range(-blfbound+self.split_point_br)])
             overlap_error_1 = np.array([overlap_error_b[i] if test_1[i] else overlap_error_r[i] for i in range(-blfbound+self.split_point_br)])
@@ -148,6 +149,7 @@ class DesiMock:
             overlap_error_rr = sightline.error[rzfbound:self.split_point_rz]
             overlap_error_z = sightline.error[self.split_point_rz:rzgbound+1]
             
+            #Use the value with the smaller error in the overlapping part
             test_2 = overlap_error_rr<overlap_error_z
             overlap_flux_2 = np.array([overlap_flux_rr[i] if test_2[i] else overlap_flux_z[i] for i in range(-rzfbound+self.split_point_rz)])
             overlap_error_2 = np.array([overlap_error_rr[i] if test_2[i] else overlap_error_z[i] for i in range(-rzfbound+self.split_point_rz)])
