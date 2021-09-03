@@ -1,3 +1,4 @@
+#these modules are used to generate QSO catalog and real DLA catalog (for mocks)
 from astropy.table import Table, vstack
 from astropy.io import fits
 import numpy as np
@@ -36,7 +37,9 @@ def generate_real_table(sightlines):
         sightline=sightlines[ii]
         for dla in sightline.dlas:
             absorber_type =  "DLA" if dla.col_density >= 20.3 else "SUBDLA"
-            real_dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(dla.central_wavelength/1215.67-1),sightline.id,sightline.s2n,str(sightline.id)+dla.id,float(dla.col_density),1.0,0.0,absorber_type))
+            real_dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(dla.central_wavelength/1215.67-1),
+                                  sightline.id,sightline.s2n,
+                                  str(sightline.id)+dla.id,float(dla.col_density),1.0,0.0,absorber_type))
     return real_dla_tbl
     
 def catalog_fits(sightlines,dlafile=None,qsofile=None):
