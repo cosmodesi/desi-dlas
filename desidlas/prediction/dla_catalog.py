@@ -12,7 +12,7 @@ def generate_qso_table(sightlines):
     
     Return
     ----------------
-    qso_tbl: astropy.table.Table object
+    qso_tbl: astropy.table.Table object, the QSO catalog
     
     """
     qso_tbl = Table(names=('Plate','FiberID','MJD','TARGET_RA','TARGET_DEC', 'ZQSO','TARGETID','S/N'),dtype=('int','int','int','float','float','float','int','float'),meta={'EXTNAME': 'QSOCAT'})
@@ -30,7 +30,7 @@ def generate_real_table(sightlines):
     
     Return
     ----------------
-    real_dla_tbl: astropy.table.Table object
+    real_dla_tbl: astropy.table.Table object, the real DLA catalog
     """
     real_dla_tbl = Table(names=('TARGET_RA','TARGET_DEC', 'ZQSO','Z','TARGETID','S/N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),dtype=('float','float','float','float','int','float','str','float','float','float','str'),meta={'EXTNAME': 'DLACAT'})
     for ii in range(0,len(sightlines)):
@@ -49,12 +49,12 @@ def catalog_fits(sightlines,dlafile=None,qsofile=None):
     Parameters
     ----------------
     sightlines: list of 'dla_cnn.data_model.Sightline.Sightline` object
-    dlafile: str
-    qsofile: str
+    dlafile: str, the path to save dla catalog file
+    qsofile: str, the path to save dla catalog file
     
     Return
     ----------------
-    real_dla_tbl: astropy.table.Table object
+    real_dla_tbl: astropy.table.Table object, the real DLA catalog
     
     """
     real_dla_tbl=generate_real_table(sightlines)
