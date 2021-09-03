@@ -107,7 +107,9 @@ def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH):
         _, mean_col_density_prediction, std_col_density_prediction, bias_correction =             sightline.prediction.get_coldensity_for_peak(peak)
 
         absorber_type =  "DLA" if mean_col_density_prediction >= 20.3 else "LYB" if sightline.is_lyb(peak) else "SUBDLA"
-        dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(z_dla),sightline.id,sightline.s2n,str(sightline.id)+'00'+str(jj),float(mean_col_density_prediction),min(1.0,float(sightline.prediction.offset_conv_sum[peak])),float(std_col_density_prediction),absorber_type))
+        dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(z_dla),sightline.id,sightline.s2n,
+                         str(sightline.id)+'00'+str(jj), float(mean_col_density_prediction),
+                         min(1.0,float(sightline.prediction.offset_conv_sum[peak])),float(std_col_density_prediction),absorber_type))
         
     return dla_tbl
 
