@@ -1,3 +1,4 @@
+#these modules are used to generated the whole DLA catalog for sightlines, and compared the predicted DLA catalog with real DLA catalog if it exits.
 import numpy as np 
 import matplotlib.pyplot as plt
 from desidlas.prediction.analyze_prediction import analyze_pred
@@ -60,13 +61,10 @@ def label_catalog(real_catalog,pred_catalog,realname=None,predname=None):
     tp_pred=[]
     fn_num=0
     fp_num=0
-    #if pred_catalog['label'][0]=='str':
-       #pred_catalog.remove_column('label')
     pred_catalog.add_column('str',name='label')
     pred_catalog.add_index('DLAID')
-    #if real_catalog['label'][0]=='str':
-       #real_catalog.remove_column('label')
     real_catalog.add_column('str',name='label')
+    
     for real_dla in real_catalog:
         pred_dlas=pred_catalog[pred_catalog['TARGETID']==real_dla['TARGETID']]
         central_wave=1215.67*(1+real_dla['Z'])
@@ -75,17 +73,21 @@ def label_catalog(real_catalog,pred_catalog,realname=None,predname=None):
         pred_coldensity=pred_dlas['NHI']
         targetid= real_dla['TARGETID']
         s2n=real_dla['S/N']
+        #Compare the predicted DLA location with the real DLA location
         lam_difference=np.abs(pred_wave-central_wave)
         if len(lam_difference) != 0:
             nearest_ix = np.argmin(lam_difference) 
-            if (lam_difference[nearest_ix]<=10)&(pred_dlas[nearest_ix]['ABSORBER_TYPE']!='LYB')&(pred_dlas[nearest_ix]['label']=='str'):#距离小于10且不是lyb
+            #if the distance between the two DLA is less than 10 Å and not lyb absorption, this real DLA is taken as a true positive
+            if (lam_difference[nearest_ix]<=10)&(pred_dlas[nearest_ix]['ABSORBER_TYPE']!='LYB')&(pred_dlas[nearest_ix]['label']=='str'):
                 real_dla['label']='tp'
                 dlaid=pred_dlas[nearest_ix]['DLAID']
                 pred_catalog.loc[dlaid]['label']='tp'
                 tp_pred.append([central_wave,col_density,pred_wave[nearest_ix],pred_coldensity[nearest_ix],targetid, s2n])
+            #if there is no prediction corresponding to this true DLA, then this is taken to be a false negative
             else:
                 real_dla['label']='fn'
                 fn_num=fn_num+1
+        #same as the previous lines
         else:
             real_dla['label']='fn'
             fn_num=fn_num+1  
@@ -93,6 +95,7 @@ def label_catalog(real_catalog,pred_catalog,realname=None,predname=None):
         if pred_dla['ABSORBER_TYPE']=='LYB':
             pred_dla['label']='LYB'
         else:
+            #the prediction is neither lyb nor tp are false positive
             if pred_dla['label']=='str':
                 pred_dla['label']='fp'
                 fp_num=fp_num+1
@@ -129,7 +132,7 @@ def get_results(real_catalog,pred_catalog,realname=None,predname=None,tpname=Non
         delta_z.append(pred_z-real_z)
         delta_NHI.append(pred[3]-pred[1])
         real_nhi.append(pred[1])
-        
+    #calculate the mean value and standard deviation of d_z and d_NHI    
     arr_mean = np.mean(delta_z)
     arr_var = np.var(delta_z)
     arr_std = np.std(delta_z,ddof=1)
