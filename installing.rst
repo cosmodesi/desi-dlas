@@ -18,6 +18,15 @@ Environment
    pip install -r requirements.txt
    
 - The file requirements.txt is in desidlas/requirements.txt
+- Using GPU can reduce the time for running the CNN model obviously, so please make sure your tensorflow version is available for the GPU.
+- If you have problem to install the tensorflow_gpu by using the requirements.txt, you can try to install it using conda:
+
+
+   .. code:: bash
+   conda create --name tf_gpu
+   conda activate tf_gpu
+   conda install tensorflow-gpu
+
 
 Get The Model File
 ------
