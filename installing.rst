@@ -23,7 +23,7 @@ Get The Model File
 ------
 -The model files are too large to upload to github, you can find the model files for high S/N spectra here:
 
-<https://drive.google.com/drive/folders/1DYOE_k9S_F0JmnAdFbTmHkVqyxFlc4t-?usp=sharing>`__
+''https://drive.google.com/drive/folders/1DYOE_k9S_F0JmnAdFbTmHkVqyxFlc4t-?usp=sharing''
 
 -The model files are too large to upload to github, you can find the model files for low S/N spectra here : 
 
