@@ -24,7 +24,9 @@ Environment
 
    .. code:: bash
    conda create --name tf_gpu
+   
    conda activate tf_gpu
+   
    conda install tensorflow-gpu
 
 
