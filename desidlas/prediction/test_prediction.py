@@ -28,12 +28,12 @@ hyperparameters = {}
 for k in range(0,len(parameter_names)):
   hyperparameters[parameter_names[k]] = parameters[k][0]
   
-pred_dataset='testdata/'
-savefile='testdata/'
+pred_dataset='desidlas/tests/datafile/github_validation_datasets.npy'
+savefile='desidlas/tests/datafile/partprediction.npy'
 
 r=np.load(pred_dataset,allow_pickle = True,encoding='latin1').item()
 
-checkpoint_filename='desidlas/prediction/model/train_highsnr/current_99999'
+checkpoint_filename='desidlas/prediction/model/train_highsnr/current_99999' #this model should be downloaded from the google drive, the link is in instal.rst
 
 dataset={}
 
