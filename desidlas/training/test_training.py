@@ -34,9 +34,9 @@ from training import calc_normalized_score
 from parameterset import parameter_names
 from parameterset import parameters
     
-train_dataset='testdata/'
-test_dataset='testdata/'
-checkpoint_filename=''
+train_dataset='desidlas/tests/datafile/github_training_datasets.npy'
+test_dataset='desidlas/tests/datafile/github_testing_datasets.npy'
+checkpoint_filename='desidlas/tests/datafile/current'.  #path to save the model file
 
 hyperparameters = {}
 #choose the hyperparameters
