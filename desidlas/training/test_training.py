@@ -43,7 +43,13 @@ hyperparameters = {}
 for k in range(0,len(parameter_names)):
   hyperparameters[parameter_names[k]] = parameters[k][0]
 
+remote_data = pytest.mark.skipif(os.getenv('CNN_MODEL') is None,
+                                 reason='test requires GPU')
+
+@remote_data
+
 #start the training
-(best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,
-last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,
-                                save_filename=checkpoint_filename, load_filename= None)
+def test_training():
+    (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,
+    last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,
+                                    save_filename=checkpoint_filename, load_filename= None)
