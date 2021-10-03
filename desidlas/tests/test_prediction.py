@@ -19,8 +19,8 @@ config.allow_soft_placement=True
 tensor_regex = re.compile('.*:\d*')
 
 
-from get_partprediction import t
-from get_partprediction import predictions_ann
+from desidlas.prediction.get_partprediction import t
+from desidlas.prediction.get_partprediction import predictions_ann
 
 from desidlas.training.parameterset import parameter_names
 from desidlas.training.parameterset import parameters
