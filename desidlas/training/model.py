@@ -89,15 +89,15 @@ def pooling_layer_parameterized(pool_method, h_conv, pool_kernel, pool_stride):
         return tf.nn.avg_pool2d(input=h_conv, ksize=[1, pool_kernel, 1, 1], strides=[1, pool_stride, 1, 1], padding='SAME')
          
 def variable_summaries(var, name, collection):
-   #Attach a lot of summaries to a Tensor.
-   #Add a variable to the collection, which can be used later when the model is called
-   '''
-   Parameters:
-   ------------
-   var: the variable
-   name: name of the variables
-   collection: name of the collection
-   '''
+    #Attach a lot of summaries to a Tensor.
+    #Add a variable to the collection, which can be used later when the model is called
+    '''
+    Parameters:
+    ------------
+    var: the variable
+    name: name of the variables
+    collection: name of the collection
+    '''
     pool_method:1 or 2,determines use max_pool or avg_pool
     with tf.compat.v1.name_scope('summaries') as r:
         mean = tf.reduce_mean(input_tensor=var)
