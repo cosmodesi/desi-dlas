@@ -11,7 +11,7 @@ from pathlib import Path
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
-from model import build_model
+from desidlas.training.model import build_model
 
 #Parameter configuration for tensorflow session
 from tensorflow.compat.v1 import ConfigProto
@@ -25,14 +25,14 @@ config.log_device_placement = True #Record the log of which device each node is 
 
 tensor_regex = re.compile('.*:\d*')
 
-from training import t
-from training import train_ann_test_batch
-from training import train_ann
-from training import save_checkpoint
-from training import calc_normalized_score
+from desidlas.training.training import t
+from desidlas.training.training import train_ann_test_batch
+from desidlas.training.training import train_ann
+from desidlas.training.training import save_checkpoint
+from desidlas.training.training import calc_normalized_score
 
-from parameterset import parameter_names
-from parameterset import parameters
+from desidlas.training.parameterset import parameter_names
+from desidlas.training.parameterset import parameters
     
 train_dataset='desidlas/tests/datafile/github_training_datasets.npy'
 test_dataset='desidlas/tests/datafile/github_testing_datasets.npy'
