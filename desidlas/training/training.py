@@ -15,7 +15,7 @@ from pathlib import Path
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
-from model import build_model
+from desidlas.training.model import build_model
 
 #Parameter configuration for tensorflow session
 from tensorflow.compat.v1 import ConfigProto
@@ -295,7 +295,7 @@ if __name__ == '__main__':
     #
     # Execute batch mode
     #
-    from Dataset import Dataset
+    from desidlas.data_model.Dataset import Dataset
     
     datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
     traindata_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
@@ -340,8 +340,8 @@ if __name__ == '__main__':
         csvoutput.write("iteration_num,normalized_score,best_accuracy,last_accuracy,last_objective,best_offset_rmse,last_offset_rmse,best_coldensity_rmse,last_coldensity_rmse," + ",".join(parameter_names) + "\n")
 
 
-    from parameterset import parameter_names
-    from parameterset import parameters
+    from desidlas.training.parameterset import parameter_names
+    from desidlas.training.parameterset import parameters
     
     #hyperparameter search
    
