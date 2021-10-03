@@ -98,7 +98,7 @@ def variable_summaries(var, name, collection):
     name: name of the variables
     collection: name of the collection
     '''
-    pool_method:1 or 2,determines use max_pool or avg_pool
+   
     with tf.compat.v1.name_scope('summaries') as r:
         mean = tf.reduce_mean(input_tensor=var)
         tf.compat.v1.add_to_collection(collection,tf.compat.v1.summary.scalar('mean/'+name,mean))
