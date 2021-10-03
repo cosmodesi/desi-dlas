@@ -36,7 +36,7 @@ from parameterset import parameters
     
 train_dataset='desidlas/tests/datafile/github_training_datasets.npy'
 test_dataset='desidlas/tests/datafile/github_testing_datasets.npy'
-checkpoint_filename='desidlas/tests/datafile/current'.  #path to save the model file
+checkpoint_filename='desidlas/tests/datafile/current'#path to save the model file
 
 hyperparameters = {}
 #choose the hyperparameters
