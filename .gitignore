@@ -1,0 +1,88 @@
+# Folders#
+.idea/
+.vscode/
+.tox/
+build/*
+dist/*
+doc/_build/*
+doc/build_/*
+bin/bin/*
+# Test folders that crop up
+keck_lris_blue_A/
+Masters/
+Science/
+QA/
+
+# Compiled source #
+###################
+# *.c
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyd
+*.pyc
+*_rjc*
+*.nbi
+*.nbc
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Various files #
+#################
+*.pdf
+tmp*.*
+*testing.ipynb
+Untitled.ipynb
+tst*.fits
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# setuptools generated version files #
+######################################
+*/version.py
+*/cython_version.py
+
+# ADDED by KBW
+.eggs
+*egg-info*
+*.ipynb_checkpoints
+*.pytest_cache
+*.swp
+pypeit/_compiler.c
+pypeit/data/telluric/atm_grids/*.fits
+pypeit/data/QL_MASTERS
+
+*.pckl
+
+# added by TEP
+doc/sphinx_warnings.out
+pypeit/tests/files/setup_files/*
+.DS_Store
