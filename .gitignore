@@ -76,13 +76,9 @@ Thumbs.db
 *.ipynb_checkpoints
 *.pytest_cache
 *.swp
-pypeit/_compiler.c
-pypeit/data/telluric/atm_grids/*.fits
-pypeit/data/QL_MASTERS
 
 *.pckl
 
 # added by TEP
 doc/sphinx_warnings.out
-pypeit/tests/files/setup_files/*
 .DS_Store
