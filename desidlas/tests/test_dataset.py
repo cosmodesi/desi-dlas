@@ -12,6 +12,8 @@ from pathlib import Path
 #this file is the output of get_sightlines.py, modules are tested in test_preprocess
 datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
 sightline_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
+dataset_path=os.path.join(datafile_path, 'dataset-16-1375.npy')
+smooth_dataset_path=os.path.join(datafile_path, 'dataset-16-1375-smooth.npy')
 
 sightlines=np.load(sightline_path,allow_pickle = True,encoding='latin1')
 
@@ -34,7 +36,7 @@ def check_labels(spec):
     
 
 def test_datasets(sightlines):
-  dataset=make_datasets(sightlines,validate=True,smooth=False)
+  dataset=make_datasets(sightlines,validate=True,output=dataset_path)
   for key in dataset.keys():
     spec=dataset[key]
     check_labels(spec)
@@ -44,7 +46,7 @@ def test_datasets(sightlines):
 
 def test_smoothdatasets(sightlines):
   
-  smoothdataset=make_datasets(sightlines,validate=True,smooth=True)
+  smoothdataset=ake_smoothdatasets(sightlines,validate=True,output=smooth_dataset_path)
   
   for key in smoothdataset.keys():
     spec=smootdataset[key]

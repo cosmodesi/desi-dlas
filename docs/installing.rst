@@ -80,3 +80,26 @@ Do these for docs::
     pip install nbsphinx
 
 
+Get The Model File
+==============
+
+ The model files are too large to upload to github, you can find the model files for high S/N spectra here:
+
+ https://drive.google.com/drive/folders/1DYOE_k9S_F0JmnAdFbTmHkVqyxFlc4t-?usp=sharing
+
+ The model files are too large to upload to github, you can find the model files for low S/N spectra here : 
+
+ https://drive.google.com/drive/folders/1s5km1NAg5j0Y-tWI1q58Y09hjj0Jjc8C?usp=sharing
+ 
+Test CNN
+==============
+
+ When you finish the installing and want to test the CNN model (training and prediction), you can firstly download all the model files here:
+ 
+ https://drive.google.com/drive/folders/1Cl07CuRBE9ljtvIoTWexEVNSd8Zzwyvg?usp=sharing
+ 
+ And then add the environmental variable CNN_MODEL as the path to the model files like this:
+ 
+ 	export CNN_MODEL=PATH TO THE MODEL FILE
+
+Then you can run tests/test_training.py and tests/test_prediction.py

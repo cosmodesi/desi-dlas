@@ -125,19 +125,41 @@ class DesiMock:
         # invoke the inside function above to select different camera's data.
         if camera == 'all':
             get_data()
-            # this part is to deal with the overlapping part(only blue channel and the red channel)
+            # this part is to deal with the overlapping part
+            #for the blue channel and the red channel
             blfbound = np.argwhere(self.wavelength == self.wavelength[self.split_point_br])[0][0]
             rrgbound = np.argwhere(self.wavelength == self.wavelength[self.split_point_br-1])[1][0]
+            
             overlap_flux_b = sightline.flux[blfbound:self.split_point_br]
             overlap_flux_r = sightline.flux[self.split_point_br:rrgbound+1]
             overlap_error_b = sightline.error[blfbound:self.split_point_br]
             overlap_error_r = sightline.error[self.split_point_br:rrgbound+1]
-            test = overlap_error_b<overlap_error_r
-            overlap_flux = np.array([overlap_flux_b[i] if test[i] else overlap_flux_r[i] for i in range(-blfbound+self.split_point_br)])
-            overlap_error = np.array([overlap_error_b[i] if test[i] else overlap_error_r[i] for i in range(-blfbound+self.split_point_br)])
-            sightline.flux = np.hstack((sightline.flux[:blfbound],overlap_flux,sightline.flux[rrgbound:]))
-            sightline.error = np.hstack((sightline.error[:blfbound],overlap_error,sightline.error[rrgbound:]))
-            sightline.loglam = np.hstack((sightline.loglam[:blfbound],sightline.loglam[blfbound:self.split_point_br],sightline.loglam[rrgbound:]))
+            
+            #Use the value with the smaller error in the overlapping part
+            test_1 = overlap_error_b<overlap_error_r
+            overlap_flux_1 = np.array([overlap_flux_b[i] if test_1[i] else overlap_flux_r[i] for i in range(-blfbound+self.split_point_br)])
+            overlap_error_1 = np.array([overlap_error_b[i] if test_1[i] else overlap_error_r[i] for i in range(-blfbound+self.split_point_br)])
+            
+            #for the red channel and the z channel
+            rzfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz])<0.000001)[0][0]
+            rzgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz-1])<0.000001)[1][0]
+            
+            overlap_flux_rr = sightline.flux[rzfbound:self.split_point_rz]
+            overlap_flux_z = sightline.flux[self.split_point_rz:rzgbound+1]
+            overlap_error_rr = sightline.error[rzfbound:self.split_point_rz]
+            overlap_error_z = sightline.error[self.split_point_rz:rzgbound+1]
+            
+            #Use the value with the smaller error in the overlapping part
+            test_2 = overlap_error_rr<overlap_error_z
+            overlap_flux_2 = np.array([overlap_flux_rr[i] if test_2[i] else overlap_flux_z[i] for i in range(-rzfbound+self.split_point_rz)])
+            overlap_error_2 = np.array([overlap_error_rr[i] if test_2[i] else overlap_error_z[i] for i in range(-rzfbound+self.split_point_rz)])
+            
+            sightline.flux = np.hstack((sightline.flux[:blfbound],overlap_flux_1,sightline.flux[rrgbound+1:rzfbound],overlap_flux_2,sightline.flux[rzgbound+1:]))
+            sightline.error = np.hstack((sightline.error[:blfbound],overlap_error_1,sightline.error[rrgbound+1:rzfbound],overlap_error_2,sightline.error[rzgbound+1:]))
+            sightline.loglam = np.hstack((sightline.loglam[:self.split_point_br],sightline.loglam[rrgbound+1:self.split_point_rz],sightline.loglam[rzgbound+1:]))
+            #recalculate the split point between red channel and z channel as part of the overlap between blue and red channel is removed.
+            sightline.split_point_rz=sightline.split_point_rz-len(overlap_flux_b)
+            
         elif camera == 'b':
             get_data(end_point = self.split_point_br)
         elif camera == 'r':
