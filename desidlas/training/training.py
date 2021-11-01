@@ -314,8 +314,8 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--checkpoint_file', help='Name of the checkpoint file to save (without file extension)', required=False, default=savemodel_path) #../models/training/current
     parser.add_argument('-r', '--train_dataset_filename', help='File name of the training dataset without extension', required=False, default=traindata_path)
     parser.add_argument('-e', '--test_dataset_filename', help='File name of the testing dataset without extension', required=False, default=testdata_path)
-    parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=600)
-    parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=4)
+    parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=400)
+    parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=1)
     args = vars(parser.parse_args())
 
     RUN_SINGLE_ITERATION = not args['hyperparamsearch']
