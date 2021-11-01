@@ -173,7 +173,10 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     
     #tf.compat.v1.placeholder:claim a tensor that needs to be filled (the data type, shape and name)
     #x: the empty tensor need to be filled with the input data
-    x = tf.compat.v1.placeholder(tf.float32, shape=[None,matrix_size, INPUT_SIZE], name='x')
+    if matrix_size == 1:
+        x = tf.compat.v1.placeholder(tf.float32, shape=[None,INPUT_SIZE], name='x')
+    if matrix_size == 4:
+        x = tf.compat.v1.placeholder(tf.float32, shape=[None,matrix_size, INPUT_SIZE], name='x')
    
     
     #claim the tensor for three labels
@@ -189,7 +192,7 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     # Stride (4,1)
     # number of filters = 4 (features?)
     # Neuron activation = ReLU (rectified linear unit)
-    W_conv1 = weight_variable([conv1_kernel, 1, 4, conv1_filters])
+    W_conv1 = weight_variable([conv1_kernel, 1, matrix_size, conv1_filters])
     b_conv1 = bias_variable([conv1_filters])
 
     # https://www.tensorflow.org/versions/r0.10/api_docs/python/nn.html#convolution
