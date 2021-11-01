@@ -96,7 +96,7 @@ def make_smoothdatasets(sightlines,validate=True,kernel=smooth_kernel, REST_RANG
             col_density=np.hstack([data_split[3]])
             lam=np.vstack([data_split[4]])
             flux_matrix=smooth_flux(flux)
-            dataset[sightline.id]={'FLUXMATRIX':flux_matrix,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
+            dataset[sightline.id]={'FLUX':flux_matrix,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
         else:
             sample_masks=select_samples_50p_pos_neg(sightline,kernel=kernel)
             if sample_masks !=[]:
@@ -105,7 +105,7 @@ def make_smoothdatasets(sightlines,validate=True,kernel=smooth_kernel, REST_RANG
                 labels_offset=np.hstack([data_split[2][m] for m in sample_masks])
                 col_density=np.hstack([data_split[3][m] for m in sample_masks])
                 flux_matrix=smooth_flux(flux)
-                dataset[sightline.id]={'FLUXMATRIX':flux_matrix,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
+                dataset[sightline.id]={'FLUX':flux_matrix,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
     np.save(output,dataset)
     return dataset
 
