@@ -134,7 +134,7 @@ if __name__ == '__main__':
     if modelfile == 'mid':
         checkpoint_filename='desidlas/prediction/model/train_midsnr/current_99999'
         for k in range(0,len(parameter_names)):
-            hyperparameters[parameter_names[k]] = parameters[k][1]
+            hyperparameters[parameter_names[k]] = parameters[k][0]
     
 
     dataset={}
