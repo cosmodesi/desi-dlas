@@ -11,6 +11,7 @@ import argparse
 import tensorflow as tf
 import os
 from pathlib import Path
+from pkg_resources import resource_filename
 
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
