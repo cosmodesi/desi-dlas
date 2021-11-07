@@ -140,7 +140,7 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):
 
 
 
-def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, load_filename=None, tblogs = "../tmp/tblogs", TF_DEVICE='/gpu:1'):
+def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE,matrix_size,,save_filename=None, load_filename=None, tblogs = "../tmp/tblogs", TF_DEVICE='/gpu:1'):
     """
     Perform training
 
@@ -352,7 +352,7 @@ if __name__ == '__main__':
 
     #start the training
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,
-    last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,
+    last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,INPUT_SIZE,matrix_size,
                                     save_filename=checkpoint_filename, load_filename=args['loadmodel'])
 
     
