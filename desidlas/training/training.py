@@ -297,6 +297,8 @@ if __name__ == '__main__':
     # Execute batch mode
     #
     from desidlas.data_model.Dataset import Dataset
+    from desidlas.training.parameterset import parameter_names
+    from desidlas.training.parameterset import parameters
     
     datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
     traindata_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
@@ -339,10 +341,6 @@ if __name__ == '__main__':
     os.remove(batch_results_file) if os.path.exists(batch_results_file) else None
     with open(batch_results_file, "a") as csvoutput:
         csvoutput.write("iteration_num,normalized_score,best_accuracy,last_accuracy,last_objective,best_offset_rmse,last_offset_rmse,best_coldensity_rmse,last_coldensity_rmse," + ",".join(parameter_names) + "\n")
-
-
-    from desidlas.training.parameterset import parameter_names
-    from desidlas.training.parameterset import parameters
     
     #hyperparameter search
    
