@@ -1,5 +1,6 @@
 import numpy as np
 from desidlas.dla_cnn.spectra_utils import get_lam_data
+from desidlas.datasets.datasetting import split_sightline_into_samples
 
 class Sightline(object):
 
@@ -77,17 +78,16 @@ class Sightline(object):
         """
         assert self.prediction is not None and peakix in self.prediction.peaks_ixs
 
-        lam, lam_rest, ix_dla_range = get_lam_data(self.loglam, self.z_qso)
-        kernelrangepx = 200
-        cut=((np.nonzero(ix_dla_range)[0])>=kernelrangepx)&((np.nonzero(ix_dla_range)[0])<=(len(lam)-kernelrangepx-1))   
-        lam_analyse=lam[ix_dla_range][cut]
+        data_split=split_sightline_into_samples(self)
+        lam_analyse=data_split[5]
+        
         lambda_higher = (lam_analyse[peakix]) / (1025.722/1215.67)#找这个peak对应的dla
 
         # An array of how close each peak is to beign the ly-b of peakix in spectrum reference frame
         peak_difference_spectrum = np.abs(lam_analyse[self.prediction.peaks_ixs] - lambda_higher)
-        nearest_peak_ix = np.argmin(peak_difference_spectrum)#找距离这个dla最近的peak
+        nearest_peak_ix = np.argmin(peak_difference_spectrum)
 
-        # get the column density of the identfied nearest peak算这两个的nhi
+        # get the column density of the identfied nearest peak
         _, potential_lya_nhi, _, _ = \
             self.prediction.get_coldensity_for_peak(self.prediction.peaks_ixs[nearest_peak_ix])
         _, potential_lyb_nhi, _, _ = \
@@ -95,10 +95,10 @@ class Sightline(object):
 
         # Validations: check that the nearest peak is close enough to match
         #              sanity check that the LyB is at least 0.3 less than the DLA
-        is_nearest_peak_within_range = peak_difference_spectrum[nearest_peak_ix] <= 15#两者距离小于15
-        is_nearest_peak_larger_coldensity = potential_lyb_nhi < potential_lya_nhi - 0.3#nhi差距0.3以上？
+        is_nearest_peak_within_range = peak_difference_spectrum[nearest_peak_ix] <= 15
+        is_nearest_peak_larger_coldensity = potential_lyb_nhi < potential_lya_nhi - 0.3
 
-        return is_nearest_peak_within_range and is_nearest_peak_larger_coldensity#true为lyb，false为lya
+        return is_nearest_peak_within_range and is_nearest_peak_larger_coldensity#true lyb,false lya
 
 
     def get_lyb_index(self, peakix):
