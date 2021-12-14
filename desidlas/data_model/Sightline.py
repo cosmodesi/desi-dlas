@@ -4,7 +4,9 @@ from desidlas.datasets.datasetting import split_sightline_into_samples
 
 class Sightline(object):
 
-    def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, split_point_rz = None,s2n = None,normalize = False):
+   def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, 
+                split_point_rz = None,s2n = None,pixel_mask=None, zwarn=None, w1=None,w2=None,
+                w1_ivar=None,w2_ivar=None,spectype=None,objtype=None,normalize = False):
         """
 
         Args:
@@ -38,12 +40,20 @@ class Sightline(object):
         self.split_point_br = split_point_br
         self.split_point_rz = split_point_rz
         self.s2n = s2n
-        
+        self.pixel_mask = pixel_mask 
+        self.zwarn = zwarn
+        self.w1 = w1
+        self.w2 = w2
+        self.w1_ivar = w1_ivar
+        self.w2_ivar = w2_ivar
+        self.spectype=spectype
+        self.objtype=objtype
         # Attributes
         self.prediction = None
         self.classification = None
         self.offsets = None
         self.column_density = None
+
 
 
      # Returns the data in the legacy data1, qso_z format for code that hasn't been updated to the new format yet
