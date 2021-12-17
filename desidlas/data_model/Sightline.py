@@ -4,7 +4,7 @@ from desidlas.datasets.datasetting import split_sightline_into_samples
 
 class Sightline(object):
 
-   def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, 
+    def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, 
                 split_point_rz = None,s2n = None,pixel_mask=None, zwarn=None, w1=None,w2=None,
                 w1_ivar=None,w2_ivar=None,spectype=None,objtype=None,normalize = False):
         """
