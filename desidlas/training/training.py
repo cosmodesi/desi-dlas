@@ -141,7 +141,7 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):
 
 
 
-def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE,matrix_size,,save_filename=None, load_filename=None, tblogs = "../tmp/tblogs", TF_DEVICE='/gpu:1'):
+def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE,matrix_size,save_filename=None,load_filename=None,tblogs = "../tmp/tblogs",TF_DEVICE='/gpu:1'):
     """
     Perform training
 
