@@ -16,7 +16,7 @@ import numpy as np
 from desidlas.dla_cnn.spectra_utils import get_lam_data
 from desidlas.dla_cnn.defs import REST_RANGE,kernel,best_v
     
-def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v['b']):
+def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v['all']):
     """
     padding the left and right sides of the spectra
 
@@ -60,7 +60,7 @@ def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v[
     lam_padded = np.hstack((pad_lam_left,lam,pad_lam_right))
     return flux_padded,lam_padded,pixel_num_left
 
-def split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel):
+def split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel,v=best_v['all']):
     """
     Split the sightline into a series of snippets, each with length kernel
 
@@ -78,7 +78,7 @@ def split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel
     kernelrangepx = int(kernel/2) #200
     
     #padding the sightline:
-    flux_padded,lam_padded,pixel_num_left=pad_sightline(sightline,lam,lam_rest,ix_dla_range,kernelrangepx,v=best_v['b'])
+    flux_padded,lam_padded,pixel_num_left=pad_sightline(sightline,lam,lam_rest,ix_dla_range,kernelrangepx,v=v)
      
     
     

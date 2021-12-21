@@ -11,6 +11,7 @@ import argparse
 import tensorflow as tf
 import os
 from pathlib import Path
+from pkg_resources import resource_filename
 
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
@@ -140,7 +141,7 @@ def train_ann_test_batch(sess, ixs, data, summary_writer=None):
 
 
 
-def train_ann(hyperparameters, train_dataset, test_dataset, save_filename=None, load_filename=None, tblogs = "../tmp/tblogs", TF_DEVICE='/gpu:1'):
+def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE,matrix_size,save_filename=None,load_filename=None,tblogs = "../tmp/tblogs",TF_DEVICE='/gpu:1'):
     """
     Perform training
 
@@ -296,6 +297,8 @@ if __name__ == '__main__':
     # Execute batch mode
     #
     from desidlas.data_model.Dataset import Dataset
+    from desidlas.training.parameterset import parameter_names
+    from desidlas.training.parameterset import parameters
     
     datafile_path = os.path.join(resource_filename('desidlas', 'tests'), 'datafile')
     traindata_path=os.path.join(datafile_path, 'sightlines-16-1375.npy')
@@ -314,8 +317,8 @@ if __name__ == '__main__':
     parser.add_argument('-c', '--checkpoint_file', help='Name of the checkpoint file to save (without file extension)', required=False, default=savemodel_path) #../models/training/current
     parser.add_argument('-r', '--train_dataset_filename', help='File name of the training dataset without extension', required=False, default=traindata_path)
     parser.add_argument('-e', '--test_dataset_filename', help='File name of the testing dataset without extension', required=False, default=testdata_path)
-    parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=600)
-    parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=4)
+    parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=400)
+    parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=1)
     args = vars(parser.parse_args())
 
     RUN_SINGLE_ITERATION = not args['hyperparamsearch']
@@ -338,10 +341,6 @@ if __name__ == '__main__':
     os.remove(batch_results_file) if os.path.exists(batch_results_file) else None
     with open(batch_results_file, "a") as csvoutput:
         csvoutput.write("iteration_num,normalized_score,best_accuracy,last_accuracy,last_objective,best_offset_rmse,last_offset_rmse,best_coldensity_rmse,last_coldensity_rmse," + ",".join(parameter_names) + "\n")
-
-
-    from desidlas.training.parameterset import parameter_names
-    from desidlas.training.parameterset import parameters
     
     #hyperparameter search
    
@@ -352,7 +351,7 @@ if __name__ == '__main__':
 
     #start the training
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,
-    last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,
+    last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,INPUT_SIZE,matrix_size,
                                     save_filename=checkpoint_filename, load_filename=args['loadmodel'])
 
     

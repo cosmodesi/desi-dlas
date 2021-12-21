@@ -40,12 +40,14 @@ def t(tensor_name):
 
 
 
-def predictions_ann(hyperparameters, flux, checkpoint_filename, TF_DEVICE=''):
+def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_filename, TF_DEVICE=''):
     '''
     Perform training
     Parameters
     ----------
     hyperparameters:hyperparameters for the CNN model structure
+    INPUT_SIZE: pixels numbers for each window , 400 for high SNR and 600 for low SNR
+    matrix_size: 1 if without smoothing, 4 if smoothing for low SNR
     flux:list (400 or 600 length), flux from sightline
     checkpoint_filename: CNN model file used to detect DLAs
     TF_DEVICE: use which gpu to train, default is '/gpu:1'
@@ -69,7 +71,7 @@ def predictions_ann(hyperparameters, flux, checkpoint_filename, TF_DEVICE=''):
 
 
     with tf.Graph().as_default():
-        build_model(hyperparameters) # build the CNN model according to hyperparameters
+        build_model(hyperparameters,INPUT_SIZE,matrix_size) # build the CNN model according to hyperparameters
 
         with tf.device(TF_DEVICE), tf.compat.v1.Session() as sess:
             tf.compat.v1.train.Saver().restore(sess, checkpoint_filename+".ckpt") #load model files
@@ -96,12 +98,17 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--preddataset', help='Datasets to detect DLAs , npy format', required=True, default=False)
     parser.add_argument('-o', '--output_file', help='output files to save the prediction result, npy format', required=False, default=False)
-    parser.add_argument('-m', '--modelfiles', help='CNN models for prediction, high snr model or mid snr model', required=False, default=False)
+    parser.add_argument('-model', '--modelfiles', help='CNN models for prediction, high snr model or mid snr model', required=False, default=False)
+    parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=400)
+    parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=1)
+
     args = vars(parser.parse_args())
 
-    RUN_SINGLE_ITERATION = not args['hyperparamsearch']
-    checkpoint_filename = args['checkpoint_file'] if RUN_SINGLE_ITERATION else None
+    
     batch_results_file = args['output_file']
+    INPUT_SIZE = args['INPUT_SIZE']
+    matrix_size = args['matrix_size']
+
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
 
@@ -111,8 +118,7 @@ if __name__ == '__main__':
     from desidlas.training.parameterset import parameter_names
     from desidlas.training.parameterset import parameters
     hyperparameters = {}
-    for k in range(0,len(parameter_names)):
-        hyperparameters[parameter_names[k]] = parameters[k][0]
+    
 
 
     pred_dataset=args['preddataset']
@@ -123,8 +129,18 @@ if __name__ == '__main__':
     modelfile=args['modelfiles']
     if modelfile == 'high':
         checkpoint_filename='desidlas/prediction/model/train_highsnr/current_99999'
+        for k in range(0,len(parameter_names)):
+            hyperparameters[parameter_names[k]] = parameters[k][1]
     if modelfile == 'mid':
         checkpoint_filename='desidlas/prediction/model/train_midsnr/current_99999'
+        for k in range(0,len(parameter_names)):
+            hyperparameters[parameter_names[k]] = parameters[k][0]
+    if modelfile == 'low':
+        checkpoint_filename='desidlas/prediction/model/train_lowsnr/current_99999'
+        for k in range(0,len(parameter_names)):
+            hyperparameters[parameter_names[k]] = parameters[k][0]
+            INPUT_SIZE = 600
+            matrix_size = 4
     
 
     dataset={}
@@ -140,7 +156,7 @@ if __name__ == '__main__':
     
         flux=np.array(r[sight_id]['FLUX'])
 
-        (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, flux, checkpoint_filename, TF_DEVICE='')
+        (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_filename, TF_DEVICE='')
 
 
         dataset[sight_id]={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity }

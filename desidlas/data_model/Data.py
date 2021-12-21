@@ -2,8 +2,8 @@
 
 from abc import ABCMeta
 
-from dla_cnn.data_model import Id
-from dla_cnn.data_model import Sightline
+from desidlas.data_model import Id
+from desidlas.data_model import Sightline
 
 
 class Data(object):

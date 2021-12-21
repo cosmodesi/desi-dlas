@@ -35,7 +35,7 @@ def get_sightlines(spectra,truth,zbest,outpath):
                 sightline.flux = sightline.flux[0:sightline.split_point_br]
                 sightline.error = sightline.error[0:sightline.split_point_br]
                 sightline.loglam = sightline.loglam[0:sightline.split_point_br]
-                rebin(sightline, best_v['b'])
+                rebin(sightline, best_v['all'])
                 sightlines.append(sightline)
                 
     np.save(outpath,sightlines)

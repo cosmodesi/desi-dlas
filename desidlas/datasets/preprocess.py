@@ -112,7 +112,6 @@ def rebin(sightline, v):
     -------
     :class:`dla_cnn.data_model.Sightline.Sightline`:
     """
-    # TODO -- Add inline comments
     c = 2.9979246e8
     
     # Set a constant dispersion
@@ -209,8 +208,9 @@ def normalize(sightline, full_wavelength, full_flux):
     assert blue_limit <= red_limit,"No Lymann-alpha forest, Please check this spectra: %i"%sightline.id#when no lymann alpha forest exists, assert error.
     #use the slice we chose above to normalize this spectra, normalize both flux and error array using the same factor to maintain the s/n.
     good_pix = (rest_wavelength>=blue_limit)&(rest_wavelength<=red_limit)
-    sightline.flux = sightline.flux/np.median(full_flux[good_pix])
-    sightline.error = sightline.error/np.median(full_flux[good_pix])
+    normalizer=np.abs(np.nanmedian(full_flux[good_pix]))
+    sightline.flux = sightline.flux/normalizer
+    sightline.error = sightline.error/normalizer
     
 def estimate_s2n(sightline):
     """
@@ -237,9 +237,9 @@ def estimate_s2n(sightline):
     #for dla in sightline.dlas:
         #test = test&((wavelength>dla.central_wavelength+delta)|(wavelength<dla.central_wavelength-delta))
     #assert np.sum(test)>0, "this sightline doesn't contain lymann forest, sightline id: %i"%sightline.id
-    s2n = sightline.flux/sightline.error
+    s2n = np.abs(sightline.flux/sightline.error)
     #return s/n
-    return np.median(s2n[test])
+    return np.nanmedian(s2n[test])
 
 def generate_summary_table(sightlines, output_dir, mode = "w"):
     """
