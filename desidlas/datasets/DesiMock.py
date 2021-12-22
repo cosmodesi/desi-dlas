@@ -5,7 +5,6 @@ from desidlas.data_model.Dla import Dla
 from desidlas.datasets import preprocess 
 from desidlas.dla_cnn.defs import best_v
 
-
 class DesiMock: 
     """
     a class to load all spectrum from a mock DESI data v9 fits file, each file contains about 1186 spectrum.
@@ -42,7 +41,7 @@ class DesiMock:
         """
         spec = fits.open(spec_path)
         zbest = fits.open(zbest_path)
-
+        
         # spec[2].data ,spec[7].data and spec[12].data are the wavelength data for the b, r and z cameras.
         self.wavelength = np.hstack((spec['B_WAVELENGTH'].data.copy(), spec['R_WAVELENGTH'].data.copy(), spec['Z_WAVELENGTH'].data.copy()))
         self.data_size = len(self.wavelength)
@@ -66,6 +65,7 @@ class DesiMock:
         else:
             truth=[]
             spec_dlas={}
+        
 
         # read data from the fits file above, one can directly get those varibles meanings by their names.
         spec_id = spec[1].data['TARGETID'].copy()
@@ -98,7 +98,7 @@ class DesiMock:
             w2_ivar=spec[1].data['FLUX_IVAR_W2'].copy()
         except:
             w2_ivar=[0]*len(spec_id)
-
+        
         if spec_dlas !={}:
             self.data = {spec_id[i]:{'FLUX':flux[i],'ERROR': error[i], 'z_qso':z_qso[i] , 'RA': ra[i], 'DEC':dec[i],'spectype':spectype[i],'objtype':objtype[i], 'ZWARN':zwarn[i],'MASK':pixel_mask[i],'W1':w1[i],'W2':w2[i],'W1_IVAR':w1_ivar[i],'W2_IVAR':w2_ivar[i],'DLAS':spec_dlas[spec_id[i]]} for i in range(len(spec_id))}
         else:
@@ -130,9 +130,8 @@ class DesiMock:
             start_point: int, the start index of the slice of the data(wavelength, flux, error), default 0
             end_point: int, the end index of the slice of the data(wavelength, flux, error), default the length of the data array
             
-            
+            Returns
             -------
-            Returns:adding information about the spectra(flux,error etc.) to the sightline obkect 
             
             """
             
@@ -159,12 +158,13 @@ class DesiMock:
         
         # invoke the inside function above to select different camera's data.
         if camera == 'all':
+            get_data()
             # this part is to deal with the overlapping part(only blue channel and the red channel)
             blfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_br])<0.000001)[0][0]
             rrgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_br-1])<0.000001)[1][0]
             #rzfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz])<0.000001)[0][0]
             #rzgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz-1])<0.000001)[1][0]
-            rzfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz])<0.4004)[1][0]
+            rzfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz])<0.4004)[0][0]
             rzgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz-1])<0.4)[1][0]
             overlap_flux_b = sightline.flux[blfbound:self.split_point_br]
             overlap_flux_r = sightline.flux[self.split_point_br:rrgbound+1]
@@ -195,7 +195,6 @@ class DesiMock:
             sightline.pixel_mask = np.hstack((sightline.pixel_mask[:blfbound],overlap_mask_1,sightline.pixel_mask[rrgbound+1:rzfbound],overlap_mask_2,sightline.pixel_mask[rzgbound+1:]))
             sightline.loglam = np.hstack((sightline.loglam[:self.split_point_br],sightline.loglam[rrgbound+1:self.split_point_rz],sightline.loglam[rzgbound+1:]))
             sightline.split_point_rz=sightline.split_point_rz-len(overlap_flux_b)
-            
         elif camera == 'b':
             get_data(end_point = self.split_point_br)
         elif camera == 'r':
@@ -209,7 +208,6 @@ class DesiMock:
         #if the parameter normalize is True, then normalize this sightline using the method in preprocess.py
         if normalize:
             preprocess.normalize(sightline, self.wavelength, self.data[id]['FLUX'])
-        
         sightline.s2n = preprocess.estimate_s2n(sightline)
         # Return the Sightline object
         return sightline

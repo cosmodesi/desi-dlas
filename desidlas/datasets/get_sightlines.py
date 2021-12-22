@@ -1,7 +1,6 @@
 from desidlas.datasets.DesiMock import DesiMock
-#from DesiMock import DesiMock
-#import DesiMock
 import numpy as np
+
 def get_sightlines(spectra,truth,zbest,outpath):
 
     """
