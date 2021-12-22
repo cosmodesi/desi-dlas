@@ -4,7 +4,7 @@ from desidlas.datasets.datasetting import split_sightline_into_samples
 
 class Sightline(object):
 
-   def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, 
+    def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, 
                 split_point_rz = None,s2n = None,pixel_mask=None, zwarn=None, w1=None,w2=None,
                 w1_ivar=None,w2_ivar=None,spectype=None,objtype=None,normalize = False):
         """
@@ -53,10 +53,8 @@ class Sightline(object):
         self.classification = None
         self.offsets = None
         self.column_density = None
+# Returns the data in the legacy data1, qso_z format for code that hasn't been updated to the new format yet
 
-
-
-     # Returns the data in the legacy data1, qso_z format for code that hasn't been updated to the new format yet
     def get_legacy_data1_format(self):
         raw_data = {}
         raw_data['flux'] = self.flux
@@ -67,7 +65,6 @@ class Sightline(object):
         raw_data['ra'] = self.id.ra if hasattr(self.id, 'ra') else 0
         raw_data['dec'] = self.id.dec if hasattr(self.id, 'dec') else 0
         return raw_data, self.z_qso
-
 
     # Clears all fields of the DLA
     def clear(self):
