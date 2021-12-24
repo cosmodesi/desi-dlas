@@ -1,5 +1,7 @@
 from desidlas.datasets.DesiMock import DesiMock
 import numpy as np
+from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
+from desidlas.dla_cnn.defs import best_v
 
 def get_sightlines(spectra,truth,zbest,outpath):
 
