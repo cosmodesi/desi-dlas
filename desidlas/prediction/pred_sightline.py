@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from desidlas.prediction.analyze_prediction import analyze_pred
 from astropy.table import Table, vstack,hstack
 
-def save_pred(sightlines,pred,PEAK_THRESH,level,filename=None):
+def save_pred(sightlines,pred,PEAK_THRESH=0.2,level=0.5,filename=None):
     """
     Using prediction for windows to get prediction for sightlines, get a pred DLA catalog.
     
