@@ -31,16 +31,9 @@ def get_sightlines(spectra,truth,zbest,outpath):
     specs.read_fits_file(spectra,truth,zbest)
     keys = list(specs.data.keys())
     for jj in keys:
-        sightline = specs.get_sightline(jj,camera = 'all', rebin=False, normalize=True)
-        #calculate S/N
-        sightline.s2n=estimate_s2n(sightline)
-        if (sightline.z_qso >= 2.33)&(sightline.s2n >= 1):#apply filtering
-                #only use blue band data
-                sightline.flux = sightline.flux[0:sightline.split_point_br]
-                sightline.error = sightline.error[0:sightline.split_point_br]
-                sightline.loglam = sightline.loglam[0:sightline.split_point_br]
-                rebin(sightline, best_v['b'])
-                sightlines.append(sightline)
+        sightline = specs.get_sightline(jj,camera = 'all', rebin=True, normalize=True)
+        if (sightline.z_qso >= 2.1)&(sightline.spectype =='QSO'):#apply filtering
+            sightlines.append(sightline)
                 
     np.save(outpath,sightlines)
     return sightlines
