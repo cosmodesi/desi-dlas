@@ -7,7 +7,7 @@ To run DLA finder on NERSC
 1. You can use code from this branch: "git clone -b realdata https://github.com/cosmodesi/desi-dlas.git"
 2. Then make sure u have installed Tensorflow. "conda install tensorflow"
 3. Download 3 CNN model files as described in desidlas/prediction/model/train_highsnr/highsnrmodel; desidlas/prediction/model/train_midsnr/midsnrmodel; desidlas/prediction/model/train_lowsnr/lowsnrmodel
-4. Modify desidlas/prediction/get_partprediction_sightline.py to relocate to your folder
+4. Modify line 18 and line 118 in desidlas/prediction/get_partprediction_sightline.py to relocate to your folder 
 5. Put the py file which you want to run in the same directory as desidlas (Just like this file), then run it to get the DLA catalog.
 '''
 
