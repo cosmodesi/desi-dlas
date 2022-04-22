@@ -155,6 +155,7 @@ class DesiMock:
             #modify error to exclude inf:
             sightline.error[np.nonzero(sightline.pixel_mask)]=0
             sightline.error[np.where(sightline.flux==0)]=0
+            sightline.s2n = preprocess.estimate_s2n(sightline)
         
         # invoke the inside function above to select different camera's data.
         if camera == 'all':
@@ -165,7 +166,7 @@ class DesiMock:
             #rzfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz])<0.000001)[0][0]
             #rzgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz-1])<0.000001)[1][0]
             rzfbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz])<0.4004)[0][0]
-            rzgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz-1])<0.4)[1][0]
+            rzgbound = np.argwhere(abs(self.wavelength - self.wavelength[self.split_point_rz-1])<0.4)[-1][0]
             overlap_flux_b = sightline.flux[blfbound:self.split_point_br]
             overlap_flux_r = sightline.flux[self.split_point_br:rrgbound+1]
             overlap_error_b = sightline.error[blfbound:self.split_point_br]
@@ -208,6 +209,6 @@ class DesiMock:
         #if the parameter normalize is True, then normalize this sightline using the method in preprocess.py
         if normalize:
             preprocess.normalize(sightline, self.wavelength, self.data[id]['FLUX'])
-        sightline.s2n = preprocess.estimate_s2n(sightline)
+        
         # Return the Sightline object
         return sightline
