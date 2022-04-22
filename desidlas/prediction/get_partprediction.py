@@ -19,7 +19,7 @@ import argparse
 import tensorflow as tf
 import timeit
 from tensorflow.python.framework import ops
-from desidlas.datasets.get_datasets import make_dataset
+from desidlas.datasets.get_dataset import make_dataset
 from tqdm import tqdm
 
 
