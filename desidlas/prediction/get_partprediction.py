@@ -15,6 +15,7 @@ Created on Sat Apr 18 20:40:41 2020
 import numpy as np
 import math
 import re, os, traceback, sys, json
+sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
 import argparse
 import tensorflow as tf
 import timeit
@@ -106,7 +107,7 @@ if __name__ == '__main__':
     #parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=1)
 
     args = vars(parser.parse_args())
-    pred_sightline=args['predsightline']
+    pred_sightlines=args['predsightlines']
     savefile = args['output_file']
     
 
@@ -114,7 +115,7 @@ if __name__ == '__main__':
     matrix_size={'high':1,'mid':1,'low':4}
     INPUT_SIZE={'high':400,'mid':400,'low':600}
 
-    checkpoint_filename={'high':'desidlas/prediction/model/train_highsnr/current_99999','mid':'desidlas/prediction/model/train_midsnr/current_99999','low':'desidlas/model/train_lowsnr/current_99999'}
+    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_lowsnr/current_99999'}
    
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
