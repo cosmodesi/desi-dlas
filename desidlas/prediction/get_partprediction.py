@@ -114,7 +114,7 @@ if __name__ == '__main__':
     matrix_size={'high':1,'mid':1,'low':4}
     INPUT_SIZE={'high':400,'mid':400,'low':600}
 
-    checkpoint_filename={'high':'desidlas/model/train_highsnr/train_highsnr/current_99999','mid':'desidlas/model/train_midsnr/train_midsnr/current_99999','low':'desidlas/model/train_lowsnr/train_lowsnr/current_99999'}
+    checkpoint_filename={'high':'desidlas/prediction/model/train_highsnr/current_99999','mid':'desidlas/prediction/model/train_midsnr/current_99999','low':'desidlas/model/train_lowsnr/current_99999'}
    
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
