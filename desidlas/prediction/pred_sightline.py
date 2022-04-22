@@ -20,10 +20,11 @@ def save_pred(sightlines,pred,PEAK_THRESH,level,filename=None):
     ---------------
     pred_abs: astropy.table.Table 
     """
-    pred_abs = Table(names=('TARGET_RA','TARGET_DEC', 'ZQSO','Z','TARGETID','S/N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),dtype=('float','float','float','float','int','float','str','float','float','float','str'),meta={'EXTNAME': 'DLACAT'})
+    pred_abs = Table()
     for ii in range(0,len(sightlines)):
         sightline=sightlines[ii]
         conf=pred[sightline.id]['conf']
+        lam_analyse = pred[sightline.id]['lam'][0]
         #if we want to change confidence level from CNN output
         #classifier=[]
         #for ii in range(0,len(conf)):
@@ -36,7 +37,7 @@ def save_pred(sightlines,pred,PEAK_THRESH,level,filename=None):
         classifier=pred[sightline.id]['pred']
         offset=pred[sightline.id]['offset']
         coldensity=pred[sightline.id]['coldensity']
-        pred_abs=vstack((pred_abs,analyze_pred(sightline,classifier,conf,offset,coldensity,PEAK_THRESH)))
+        pred_abs=vstack((pred_abs,analyze_pred(sightline,classifier,conf,offset,coldensity,PEAK_THRESH, lam_analyse)))
     pred_abs.write(filename,overwrite=True)
     return pred_abs
 
