@@ -2,8 +2,9 @@ from desidlas.datasets.DesiMock import DesiMock
 import numpy as np
 from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
 from desidlas.dla_cnn.defs import best_v
+from tqdm import tqdm
 
-def get_sightlines(spectra,truth,zbest,outpath):
+def get_sightlines(spectra,truth,zbest,outpath,v=best_v['all']):
 
     """
     Read Fits file and preprocess the sightlines
@@ -30,9 +31,11 @@ def get_sightlines(spectra,truth,zbest,outpath):
     specs = DesiMock()
     specs.read_fits_file(spectra,truth,zbest)
     keys = list(specs.data.keys())
-    for jj in keys:
-        sightline = specs.get_sightline(jj,camera = 'all', rebin=True, normalize=True)
+    for jj in tqdm(keys):
+        sightline = specs.get_sightline(jj,camera = 'all', rebin=False, normalize=False)
         if (sightline.z_qso >= 2.1)&(sightline.spectype =='QSO'):#apply filtering
+            normalize(sightline, 10**sightline.loglam, sightline.flux)
+            rebin(sightline, v)
             sightlines.append(sightline)
                 
     np.save(outpath,sightlines)
