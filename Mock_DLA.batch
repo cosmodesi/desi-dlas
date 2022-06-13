@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH -N 1
+#SBATCH -C haswell
+#SBATCH -q debug
+#SBATCH -J Mock_DLA
+#SBATCH -t 00:30:00
+#SBATCH -L project
+#SBATCH -A desi
+#SBATCH --mail-user=ting.tan@lpnhe.in2p3.fr
+#SBATCH --mail-type=END,FAIL
+#OpenMP settings:
+export OMP_NUM_THREADS=1
+python Mock_DLA.py

@@ -22,7 +22,7 @@ from tensorflow.python.framework import ops
 
 ops.reset_default_graph()
 
-
+sys.path.append('/global/homes/t/tanting/DESI_analysis/desi-dlas')
 from desidlas.training.model import build_model
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
@@ -127,6 +127,7 @@ if __name__ == '__main__':
     r=np.load(pred_dataset,allow_pickle = True,encoding='latin1').item()
 
     modelfile=args['modelfiles']
+    print(parameters,len(parameter_names),len(parameters))
     if modelfile == 'high':
         checkpoint_filename='desidlas/prediction/model/train_highsnr/current_99999'
         for k in range(0,len(parameter_names)):
