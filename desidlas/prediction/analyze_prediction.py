@@ -2,8 +2,6 @@
 import numpy as np 
 #from desidlas.data_model.Sightline import Sightline
 from desidlas.data_model.Prediction import Prediction
-from desidlas.dla_cnn.spectra_utils import get_lam_data
-from desidlas.datasets.datasetting import split_sightline_into_samples
 from astropy.table import Table
 import scipy.signal as signal
 def compute_peaks(sightline,PEAK_THRESH):
@@ -69,7 +67,7 @@ def compute_peaks(sightline,PEAK_THRESH):
         #print(sightline.id,np.amax(smooth_conv_sum))
     return sightline
 
-def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH):
+def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH,lam_analyse):
     """
     Gnerate DLA catalog for each sightline
     
@@ -94,11 +92,10 @@ def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH):
     sightline.prediction = Prediction(loc_pred=pred, loc_conf=conf, offsets=offset, density_data=coldensity)
     compute_peaks(sightline,PEAK_THRESH)
     sightline.prediction.smoothed_loc_conf()
-    data_split=split_sightline_into_samples(sightline)
-    lam_analyse=data_split[5]
+    
     
     #generate absorbers catalog for every sightline
-    dla_tbl = Table(names=('TARGET_RA','TARGET_DEC', 'ZQSO','Z','TARGETID','S/N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),dtype=('float','float','float','float','int','float','str','float','float','float','str'),meta={'EXTNAME': 'DLACAT'})
+    dla_tbl = Table(names=('TARGET_RA','TARGET_DEC', 'Z_QSO','Z_DLA','TARGETID','S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),dtype=('float','float','float','float','int','float','str','float','float','float','str'),meta={'EXTNAME': 'DLACAT'})
     for jj in range(0,len(sightline.prediction.peaks_ixs)):
         peak=sightline.prediction.peaks_ixs[jj]
         peak_lam_spectrum = lam_analyse[peak]

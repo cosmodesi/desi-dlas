@@ -3,7 +3,7 @@
 """
 Created on Sat Apr 18 20:40:41 2020
 
-@author: benwang
+@author: benwang, Jiaqi Zou
 """
 
 """ Methods for CNN DLA Finder Prediction"""
@@ -15,10 +15,14 @@ Created on Sat Apr 18 20:40:41 2020
 import numpy as np
 import math
 import re, os, traceback, sys, json
+sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
 import argparse
 import tensorflow as tf
 import timeit
 from tensorflow.python.framework import ops
+from desidlas.datasets.get_dataset import make_dataset
+from tqdm import tqdm
+
 
 ops.reset_default_graph()
 
@@ -96,19 +100,23 @@ if __name__ == '__main__':
 
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('-p', '--preddataset', help='Datasets to detect DLAs , npy format', required=True, default=False)
+    parser.add_argument('-p', '--predsightlines', help='Sightlines to detect DLAs , npy format', required=True, default=False)
     parser.add_argument('-o', '--output_file', help='output files to save the prediction result, npy format', required=False, default=False)
-    parser.add_argument('-model', '--modelfiles', help='CNN models for prediction, high snr model or mid snr model', required=False, default=False)
-    parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=400)
-    parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=1)
+    #parser.add_argument('-model', '--modelfiles', help='CNN models for prediction, high snr model or mid snr model', required=False, default=False)
+    #parser.add_argument('-t', '--INPUT_SIZE', help='set the input data size', required=False, default=400)
+    #parser.add_argument('-m', '--matrix_size', help='set the matrix size when using smooth', required=False, default=1)
 
     args = vars(parser.parse_args())
-
+    pred_sightlines=args['predsightlines']
+    savefile = args['output_file']
     
-    batch_results_file = args['output_file']
-    INPUT_SIZE = args['INPUT_SIZE']
-    matrix_size = args['matrix_size']
 
+    #parameters
+    matrix_size={'high':1,'mid':1,'low':4}
+    INPUT_SIZE={'high':400,'mid':400,'low':600}
+
+    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_lowsnr/current_99999'}
+   
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
 
@@ -119,6 +127,7 @@ if __name__ == '__main__':
     from desidlas.training.parameterset import parameters
     hyperparameters = {}
     
+<<<<<<< HEAD
 
 
     pred_dataset=args['preddataset']
@@ -144,41 +153,27 @@ if __name__ == '__main__':
             matrix_size = 4
     
 
+=======
+    r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
+>>>>>>> 570e66455bc5d8160c86009595053688775f9a8f
     dataset={}
 
-
-    TP=[]
-    TN=[]
-    FP=[]
-    FN=[]
-    #4 empty list to record number of TP,TN,FP,FN samples
-
-    for sight_id in r.keys():
-    
-        flux=np.array(r[sight_id]['FLUX'])
-
-        (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_filename, TF_DEVICE='')
-
-
-        dataset[sight_id]={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity }
-
-        for p in range(0,len(pred)):
-            if (r[sight_id]['labels_classifier'][p]==1) & (pred[p]==1):
-                TP.append(p)
-            if (r[sight_id]['labels_classifier'][p]==1) & (pred[p]==0):
-                FN.append(p)
-            if (r[sight_id]['labels_classifier'][p]==0) & (pred[p]==0):
-                TN.append(p)
-            if (r[sight_id]['labels_classifier'][p]==0) & (pred[p]==1):
-                FP.append(p)
+    for sightline in tqdm(r.ravel()):
+        flux,lam=make_dataset(sightline)
+        if sightline.s2n<3:
+            model='low'
+            for k in range(0,len(parameter_names)):
+                hyperparameters[parameter_names[k]] = parameters[k][0]
+        else:#s2n>3 use mid model
+            model='mid'
+            for k in range(0,len(parameter_names)):
+                hyperparameters[parameter_names[k]] = parameters[k][0]
+        (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux, checkpoint_filename[model], TF_DEVICE='')#/gpu:1
+        dataset[sightline.id]={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
         
 
     np.save(savefile,dataset)
 
-    print('samples of TP is %s'%(len(TP)))
-    print('samples of TN is %s'%(len(TN)))
-    print('samples of FP is %s'%(len(FP)))
-    print('samples of FN is %s'%(len(FN)))
     
 
     

@@ -155,6 +155,7 @@ class DesiMock:
             #modify error to exclude inf:
             sightline.error[np.nonzero(sightline.pixel_mask)]=0
             sightline.error[np.where(sightline.flux==0)]=0
+            sightline.s2n = preprocess.estimate_s2n(sightline)
         
         # invoke the inside function above to select different camera's data.
         if camera == 'all':
@@ -202,12 +203,13 @@ class DesiMock:
         else:
             get_data(start_point=self.split_point_rz)
 
-        # if the parameter rebin is True, then rebin this sightline using rebin method in preprocess.py and the v we determined previously(defs.py/best_v) .
-        if rebin:
-            preprocess.rebin(sightline, best_v[camera])
         #if the parameter normalize is True, then normalize this sightline using the method in preprocess.py
         if normalize:
             preprocess.normalize(sightline, self.wavelength, self.data[id]['FLUX'])
-        sightline.s2n = preprocess.estimate_s2n(sightline)
+        # if the parameter rebin is True, then rebin this sightline using rebin method in preprocess.py and the v we determined previously(defs.py/best_v) .
+        if rebin:
+            preprocess.rebin(sightline, best_v[camera])
+        
+        
         # Return the Sightline object
         return sightline

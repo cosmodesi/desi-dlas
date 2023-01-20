@@ -114,6 +114,12 @@ def rebin(sightline, v):
     """
     c = 2.9979246e8
     
+    #add pixel mask
+    ind = sightline.error != 0
+    sightline.loglam = sightline.loglam[ind]
+    sightline.error = sightline.error[ind]
+    sightline.flux = sightline.flux[ind]
+    
     # Set a constant dispersion
     dlnlambda = np.log(1+v/c)
     wavelength = 10**sightline.loglam #the wavelength range 
@@ -207,7 +213,7 @@ def normalize(sightline, full_wavelength, full_flux):
     rest_wavelength = full_wavelength/(sightline.z_qso+1)
     assert blue_limit <= red_limit,"No Lymann-alpha forest, Please check this spectra: %i"%sightline.id#when no lymann alpha forest exists, assert error.
     #use the slice we chose above to normalize this spectra, normalize both flux and error array using the same factor to maintain the s/n.
-    good_pix = (rest_wavelength>=blue_limit)&(rest_wavelength<=red_limit)
+    good_pix = (rest_wavelength>=blue_limit)&(rest_wavelength<=red_limit)&(sightline.error != 0)
     normalizer=np.abs(np.nanmedian(full_flux[good_pix]))
     sightline.flux = sightline.flux/normalizer
     sightline.error = sightline.error/normalizer
@@ -229,7 +235,7 @@ def estimate_s2n(sightline):
     wavelength = 10**sightline.loglam
     rest_wavelength = wavelength/(sightline.z_qso+1)
     #lymann forest part of this sightline, contain dlas 
-    test = (rest_wavelength>blue_limit)&(rest_wavelength<red_limit)
+    test = (rest_wavelength>blue_limit)&(rest_wavelength<red_limit)&(sightline.error != 0)
     #when excluding the part of dla, we remove the part between central_wavelength+-delta
     #dwv = rest_wavelength[1]-rest_wavelength[0]#because we may change the re-sampling of the spectra, this need to be calculated.
     #dv = dwv/rest_wavelength[0] * 3e5  # km/s
