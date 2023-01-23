@@ -115,7 +115,7 @@ if __name__ == '__main__':
     matrix_size={'high':1,'mid':1,'low':4}
     INPUT_SIZE={'high':400,'mid':400,'low':600}
 
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_lowsnr/current_99999'}
+    checkpoint_filename={'high':'/global/u1/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/model/train_highsnr/current_99999','mid':'/global/u1/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/model/train_midsnr/current_99999','low':'/global/u1/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/model/train_lowsnr/current_99999'}
    
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
@@ -127,7 +127,6 @@ if __name__ == '__main__':
     from desidlas.training.parameterset import parameters
     hyperparameters = {}
     
-<<<<<<< HEAD
 
 
     pred_dataset=args['preddataset']
@@ -153,9 +152,7 @@ if __name__ == '__main__':
             matrix_size = 4
     
 
-=======
     r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
->>>>>>> 570e66455bc5d8160c86009595053688775f9a8f
     dataset={}
 
     for sightline in tqdm(r.ravel()):
