@@ -15,14 +15,14 @@ Created on Sat Apr 18 20:40:41 2020
 import numpy as np
 import math
 import re, os, traceback, sys, json
-sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
+#sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
 import argparse
 import tensorflow as tf
 import timeit
 from tensorflow.python.framework import ops
 from desidlas.datasets.get_dataset import make_dataset
 from tqdm import tqdm
-
+from pkg_resources import resource_filename
 
 ops.reset_default_graph()
 
@@ -98,7 +98,7 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
 if __name__ == '__main__':
 
 
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-p', '--predsightlines', help='Sightlines to detect DLAs , npy format', required=True, default=False)
     parser.add_argument('-o', '--output_file', help='output files to save the prediction result, npy format', required=False, default=False)
@@ -109,14 +109,18 @@ if __name__ == '__main__':
     args = vars(parser.parse_args())
     pred_sightlines=args['predsightlines']
     savefile = args['output_file']
-    
+
 
     #parameters
     matrix_size={'high':1,'mid':1,'low':4}
     INPUT_SIZE={'high':400,'mid':400,'low':600}
 
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_lowsnr/current_99999'}
-   
+    checkpoint_filename={'high':resource_filename("desidlas","prediction/model/train_highsnr/current_99999"),
+                         'mid':resource_filename("desidlas","prediction/model/train_midsnr/current_99999"),
+                         'low':resource_filename("desidlas","prediction/model/train_lowsnr/current_99999")}
+
+    #checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/desidlas/prediction/model/train_lowsnr/current_99999'}
+
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
 
@@ -126,12 +130,14 @@ if __name__ == '__main__':
     from desidlas.training.parameterset import parameter_names
     from desidlas.training.parameterset import parameters
     hyperparameters = {}
-    
+
     r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
     dataset={}
 
     for sightline in tqdm(r.ravel()):
         flux,lam=make_dataset(sightline)
+        if flux is None : # empty
+            continue
         if sightline.s2n<3:
             model='low'
             for k in range(0,len(parameter_names)):
@@ -142,10 +148,6 @@ if __name__ == '__main__':
                 hyperparameters[parameter_names[k]] = parameters[k][0]
         (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux, checkpoint_filename[model], TF_DEVICE='')#/gpu:1
         dataset[sightline.id]={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
-        
+
 
     np.save(savefile,dataset)
-
-    
-
-    

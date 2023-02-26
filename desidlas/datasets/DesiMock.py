@@ -2,10 +2,10 @@ from astropy.io import fits
 import numpy as np
 from desidlas.data_model.Sightline import Sightline
 from desidlas.data_model.Dla import Dla
-from desidlas.datasets import preprocess 
+from desidlas.datasets import preprocess
 from desidlas.dla_cnn.defs import best_v
 
-class DesiMock: 
+class DesiMock:
     """
     a class to load all spectrum from a mock DESI data v9 fits file, each file contains about 1186 spectrum.
     ------------------------------------------------------------------------------
@@ -30,18 +30,18 @@ class DesiMock:
         read Desi Mock spectrum from a fits file, load all spectrum as a DesiMock object
         ------------------------------------------------------------------------------------------------
         parameters:
-        
+
         spec_path:  str, spectrum file path
         truth_path: str, truth file path
         zbest_path: str, zbest file path
         ------------------------------------------------------------------------------------------------
         return:
-        
+
         self.wavelength,self.data(contained all information we need),self.split_point_br,self.split_point_rz,self.data_size
         """
         spec = fits.open(spec_path)
         zbest = fits.open(zbest_path)
-        
+
         # spec[2].data ,spec[7].data and spec[12].data are the wavelength data for the b, r and z cameras.
         self.wavelength = np.hstack((spec['B_WAVELENGTH'].data.copy(), spec['R_WAVELENGTH'].data.copy(), spec['Z_WAVELENGTH'].data.copy()))
         self.data_size = len(self.wavelength)
@@ -65,7 +65,7 @@ class DesiMock:
         else:
             truth=[]
             spec_dlas={}
-        
+
 
         # read data from the fits file above, one can directly get those varibles meanings by their names.
         spec_id = spec[1].data['TARGETID'].copy()
@@ -76,6 +76,8 @@ class DesiMock:
         ivar_b = spec['B_IVAR'].data.copy()
         ivar_r = spec['R_IVAR'].data.copy()
         ivar_z = spec['Z_IVAR'].data.copy()
+        #ivar   = np.hstack((ivar_b,ivar_r,ivar_z))
+        #error = 1./np.sqrt(ivar+(ivar==0)*1e-12)
         error = 1./np.sqrt(np.hstack((ivar_b,ivar_r,ivar_z)))
         pixel_mask=np.hstack((spec['B_MASK'].data.copy(),spec['R_MASK'].data.copy(),spec['Z_MASK'].data.copy()))
         self.split_point_br = flux_b.shape[1]
@@ -93,12 +95,12 @@ class DesiMock:
             w1_ivar=spec[1].data['FLUX_IVAR_W1'].copy()
         except:
             w1_ivar=[0]*len(spec_id)
-    
+
         try:
             w2_ivar=spec[1].data['FLUX_IVAR_W2'].copy()
         except:
             w2_ivar=[0]*len(spec_id)
-        
+
         if spec_dlas !={}:
             self.data = {spec_id[i]:{'FLUX':flux[i],'ERROR': error[i], 'z_qso':z_qso[i] , 'RA': ra[i], 'DEC':dec[i],'spectype':spectype[i],'objtype':objtype[i], 'ZWARN':zwarn[i],'MASK':pixel_mask[i],'W1':w1[i],'W2':w2[i],'W1_IVAR':w1_ivar[i],'W2_IVAR':w2_ivar[i],'DLAS':spec_dlas[spec_id[i]]} for i in range(len(spec_id))}
         else:
@@ -124,17 +126,17 @@ class DesiMock:
         # this inside method can get the data(wavelength, flux, error) from the start_point(int) to end_point(int)
         def get_data(start_point=0, end_point=self.data_size):
             """
-            
+
             Parameters
             ----------
             start_point: int, the start index of the slice of the data(wavelength, flux, error), default 0
             end_point: int, the end index of the slice of the data(wavelength, flux, error), default the length of the data array
-            
+
             Returns
             -------
-            
+
             """
-            
+
             sightline.flux = self.data[id]['FLUX'][start_point:end_point]
             sightline.error = self.data[id]['ERROR'][start_point:end_point]
             sightline.z_qso = self.data[id]['z_qso']
@@ -156,7 +158,7 @@ class DesiMock:
             sightline.error[np.nonzero(sightline.pixel_mask)]=0
             sightline.error[np.where(sightline.flux==0)]=0
             sightline.s2n = preprocess.estimate_s2n(sightline)
-        
+
         # invoke the inside function above to select different camera's data.
         if camera == 'all':
             get_data()
@@ -173,24 +175,24 @@ class DesiMock:
             overlap_error_r = sightline.error[self.split_point_br:rrgbound+1]
             overlap_mask_b = sightline.pixel_mask[blfbound:self.split_point_br]
             overlap_mask_r = sightline.pixel_mask[self.split_point_br:rrgbound+1]
-            
+
             overlap_flux_rr = sightline.flux[rzfbound:self.split_point_rz]
             overlap_flux_z = sightline.flux[self.split_point_rz:rzgbound+1]
             overlap_error_rr = sightline.error[rzfbound:self.split_point_rz]
             overlap_error_z = sightline.error[self.split_point_rz:rzgbound+1]
             overlap_mask_rr = sightline.pixel_mask[rzfbound:self.split_point_rz]
             overlap_mask_z = sightline.pixel_mask[self.split_point_rz:rzgbound+1]
-            
+
             test_1 = overlap_error_b<overlap_error_r
             overlap_flux_1 = np.array([overlap_flux_b[i] if test_1[i] else overlap_flux_r[i] for i in range(-blfbound+self.split_point_br)])
             overlap_error_1 = np.array([overlap_error_b[i] if test_1[i] else overlap_error_r[i] for i in range(-blfbound+self.split_point_br)])
             overlap_mask_1 = np.array([overlap_mask_b[i] if test_1[i] else overlap_mask_r[i] for i in range(-blfbound+self.split_point_br)])
-            
+
             test_2 = overlap_error_rr<overlap_error_z
             overlap_flux_2 = np.array([overlap_flux_rr[i] if test_2[i] else overlap_flux_z[i] for i in range(-rzfbound+self.split_point_rz)])
             overlap_error_2 = np.array([overlap_error_rr[i] if test_2[i] else overlap_error_z[i] for i in range(-rzfbound+self.split_point_rz)])
             overlap_mask_2 = np.array([overlap_mask_rr[i] if test_2[i] else overlap_mask_z[i] for i in range(-rzfbound+self.split_point_rz)])
-            
+
             sightline.flux = np.hstack((sightline.flux[:blfbound],overlap_flux_1,sightline.flux[rrgbound+1:rzfbound],overlap_flux_2,sightline.flux[rzgbound+1:]))
             sightline.error = np.hstack((sightline.error[:blfbound],overlap_error_1,sightline.error[rrgbound+1:rzfbound],overlap_error_2,sightline.error[rzgbound+1:]))
             sightline.pixel_mask = np.hstack((sightline.pixel_mask[:blfbound],overlap_mask_1,sightline.pixel_mask[rrgbound+1:rzfbound],overlap_mask_2,sightline.pixel_mask[rzgbound+1:]))
@@ -209,7 +211,7 @@ class DesiMock:
         # if the parameter rebin is True, then rebin this sightline using rebin method in preprocess.py and the v we determined previously(defs.py/best_v) .
         if rebin:
             preprocess.rebin(sightline, best_v[camera])
-        
-        
+
+
         # Return the Sightline object
         return sightline

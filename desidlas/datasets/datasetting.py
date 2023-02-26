@@ -15,7 +15,7 @@ import numpy as np
 
 from desidlas.dla_cnn.spectra_utils import get_lam_data
 from desidlas.dla_cnn.defs import REST_RANGE,kernel,best_v
-    
+
 def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v['all']):
     """
     padding the left and right sides of the spectra
@@ -32,12 +32,17 @@ def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v[
     Returns
     flux_padded:np.ndarray,flux after padding
     lam_padded:np.ndarray,lam after padding
-    pixel_num_left:int,the number of pixels padded to the left side of spectra 
+    pixel_num_left:int,the number of pixels padded to the left side of spectra
     -------
 
     """
     c = 2.9979246e8
     dlnlambda = np.log(1+v/c)
+
+    if len(np.nonzero(ix_dla_range)[0]) == 0 :
+        print("empty array")
+        return None,None,None
+
     #pad left side
     if np.nonzero(ix_dla_range)[0][0]<kernelrangepx:
         pixel_num_left=kernelrangepx-np.nonzero(ix_dla_range)[0][0]
@@ -46,7 +51,7 @@ def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v[
     else:
         pixel_num_left=0
         pad_lam_left=[]
-        pad_value_left=[] 
+        pad_value_left=[]
     #pad right side
     if np.nonzero(ix_dla_range)[0][-1]>len(lam)-kernelrangepx:
         pixel_num_right=kernelrangepx-(len(lam)-np.nonzero(ix_dla_range)[0][-1])
@@ -76,22 +81,23 @@ def split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel
     """
     lam, lam_rest, ix_dla_range = get_lam_data(sightline.loglam, sightline.z_qso, REST_RANGE)
     kernelrangepx = int(kernel/2) #200
-    
+
     #padding the sightline:
     flux_padded,lam_padded,pixel_num_left=pad_sightline(sightline,lam,lam_rest,ix_dla_range,kernelrangepx,v=v)
-     
-    
-    
+
+    if flux_padded is None : # empty
+        return None,None,None,None,None,None,None
+
     fluxes_matrix = np.vstack(map(lambda x:x[0][x[1]-kernelrangepx:x[1]+kernelrangepx],zip(itertools.repeat(flux_padded), np.nonzero(ix_dla_range)[0]+pixel_num_left)))
     lam_matrix = np.vstack(map(lambda x:x[0][x[1]-kernelrangepx:x[1]+kernelrangepx],zip(itertools.repeat(lam_padded), np.nonzero(ix_dla_range)[0]+pixel_num_left)))
-    #using cut will lose side information,so we use padding instead of cutting 
-    
+    #using cut will lose side information,so we use padding instead of cutting
+
     #the wavelength and flux array we input:
     input_lam=lam_padded[np.nonzero(ix_dla_range)[0]+pixel_num_left]
     input_flux=flux_padded[np.nonzero(ix_dla_range)[0]+pixel_num_left]
-   
+
     return fluxes_matrix, sightline.classification, sightline.offsets, sightline.column_density,lam_matrix,input_lam,input_flux
-   
+
 
 def select_samples_50p_pos_neg(sightline,kernel=kernel):
     """
@@ -109,10 +115,10 @@ def select_samples_50p_pos_neg(sightline,kernel=kernel):
         positive + negative indices
 
     """
-   
+
     lam, lam_rest, ix_dla_range = get_lam_data(sightline.loglam, sightline.z_qso)
     kernelrangepx = int(kernel/2)# take half length of the kernel
-    
+
     num_pos = np.sum(sightline.classification==1, dtype=np.float64) #count the quantity of all positive samples(classification=1,with DLAs)
     num_neg = np.sum(sightline.classification==0, dtype=np.float64)#count the quantity of all negtive samples
     n_samples = int(min(num_pos, num_neg)) #take the minimum of these two quantities
@@ -121,7 +127,5 @@ def select_samples_50p_pos_neg(sightline,kernel=kernel):
 
     pos_ixs = r[sightline.classification[r]==1][0:n_samples]# index for positive samples
     neg_ixs = r[sightline.classification[r]==0][0:n_samples]# index for negative samples
-    
-    return np.hstack((pos_ixs,neg_ixs))
-    
 
+    return np.hstack((pos_ixs,neg_ixs))

@@ -5,7 +5,7 @@
 1. Resample to a constant dlambda/lambda dispersion
 2. Renomalize the flux?
 3. Generate a Sightline object with DLAs
-4. Add labels 
+4. Add labels
 5. Write to disk (numpy or TF)
 '''
 
@@ -33,7 +33,7 @@ def label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE, pos_sample_
     sightline: dla_cnn.data_model.Sightline
     pos_sample_kernel_percent: float
     kernel: pixel numbers for each spectra window
-    REST_RANGE: [900,1346], wavelength range of DLAs in the rest frame 
+    REST_RANGE: [900,1346], wavelength range of DLAs in the rest frame
 
     Returns
     -------
@@ -51,7 +51,7 @@ def label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE, pos_sample_
     coldensity_dlas=[]
     for dla in sightline.dlas:
         if (912<(dla.central_wavelength/(1+sightline.z_qso))<1220)&(dla.central_wavelength>=3700):
-            ix_dlas.append(np.abs(lam[ix_dla_range]-dla.central_wavelength).argmin()) 
+            ix_dlas.append(np.abs(lam[ix_dla_range]-dla.central_wavelength).argmin())
             coldensity_dlas.append(dla.col_density)    # column densities matching ix_dlas
 
     '''
@@ -113,25 +113,25 @@ def rebin(sightline, v):
     :class:`dla_cnn.data_model.Sightline.Sightline`:
     """
     c = 2.9979246e8
-    
+
     #add pixel mask
     ind = sightline.error != 0
     sightline.loglam = sightline.loglam[ind]
     sightline.error = sightline.error[ind]
     sightline.flux = sightline.flux[ind]
-    
+
     # Set a constant dispersion
     dlnlambda = np.log(1+v/c)
-    wavelength = 10**sightline.loglam #the wavelength range 
+    wavelength = 10**sightline.loglam #the wavelength range
     max_wavelength = wavelength[-1]
     min_wavelength = wavelength[0]
-    
+
     # Calculate how many pixels are needed for Rebinning in this spectra
     pixels_number = int(np.round(np.log(max_wavelength/min_wavelength)/dlnlambda))+1 #how many pixels in this spectra
-    
+
     # Rebined wavelength
     new_wavelength = wavelength[0]*np.exp(dlnlambda*np.arange(pixels_number))
-    
+
     # Endpoints of original pixels
     npix = len(wavelength)
     wvh = (wavelength + np.roll(wavelength, -1)) / 2.
@@ -140,55 +140,70 @@ def rebin(sightline, v):
     dwv = wvh - np.roll(wvh, 1)
     dwv[0] = 2 * (wvh[0] - wavelength[0])
     med_dwv = np.median(dwv)
-    
+
     # Cumulative Sum
     cumsum = np.cumsum(sightline.flux * dwv)
     cumvar = np.cumsum(sightline.error * dwv, dtype=np.float64)
-    
+
     # Interpolate
     fcum = interp1d(wvh, cumsum,bounds_error=False)
     fvar = interp1d(wvh, cumvar,bounds_error=False)
-    
+
     # Endpoints of new pixels
     nnew = len(new_wavelength)
     nwvh = (new_wavelength + np.roll(new_wavelength, -1)) / 2.
     nwvh[nnew - 1] = new_wavelength[nnew - 1] + \
                      (new_wavelength[nnew - 1] - new_wavelength[nnew - 2]) / 2.
-    
+
     # Pad starting point
     bwv = np.zeros(nnew + 1)
     bwv[0] = new_wavelength[0] - (new_wavelength[1] - new_wavelength[0]) / 2.
     bwv[1:] = nwvh
-    
+
     # Evaluate
     newcum = fcum(bwv)
     newvar = fvar(bwv)
-    
+
     # Rebinned flux, var
     new_fx = (np.roll(newcum, -1) - newcum)[:-1]
     new_var = (np.roll(newvar, -1) - newvar)[:-1]
-    
+
     # Normalize (preserve counts and flambda)
     new_dwv = bwv - np.roll(bwv, 1)
     new_fx = new_fx / new_dwv[1:]
     # Preserve S/N (crudely)
     med_newdwv = np.median(new_dwv)
     new_var = new_var / (med_newdwv/med_dwv) / new_dwv[1:]
-    
+
+    bad=np.isnan(new_fx)|np.isnan(new_var)
+    good=~bad
+    ii=np.where(good)[0]
+
+    if np.sum(ii)<2 :
+        print("empty sightline?")
+        sightline.loglam = np.array([])
+        sightline.flux = np.array([])
+        sightline.error = np.array([])
+        return sightline
+    left=ii[0]
+    right=ii[-1]+1
+
+    """
     left = 0
     while np.isnan(new_fx[left])|np.isnan(new_var[left]):
         left = left+1
     right = len(new_fx)
     while np.isnan(new_fx[right-1])|np.isnan(new_var[right-1]):
         right = right-1
-    
+    """
+
     test = np.sum((np.isnan(new_fx[left:right]))|(np.isnan(new_var[left:right])))
     assert test==0, 'Missing value in this spectra!'
-    
+
     sightline.loglam = np.log10(new_wavelength[left:right])
     sightline.flux = new_fx[left:right]
     sightline.error = new_var[left:right]
-    
+
     return sightline
 
 
@@ -197,16 +212,16 @@ def normalize(sightline, full_wavelength, full_flux):
     Normalize spectrum by dividing the mean value of continnum at lambda[left,right]
     ------------------------------------------
     parameters:
-    
+
     sightline: dla_cnn.data_model.Sightline.Sightline object;
     full_flux: list, flux of the spectra
-    full_wavelength: list,wavelength of the spectra 
-    
+    full_wavelength: list,wavelength of the spectra
+
     --------------------------------------------
     return
-    
+
     sightline: the sightline after normalized
-    
+
     """
     blue_limit = 1420
     red_limit = 1480
@@ -217,7 +232,7 @@ def normalize(sightline, full_wavelength, full_flux):
     normalizer=np.abs(np.nanmedian(full_flux[good_pix]))
     sightline.flux = sightline.flux/normalizer
     sightline.error = sightline.error/normalizer
-    
+
 def estimate_s2n(sightline):
     """
     Estimate the s/n of a given sightline, using the lymann forest part and excluding dlas.
@@ -234,7 +249,7 @@ def estimate_s2n(sightline):
     red_limit = 1480
     wavelength = 10**sightline.loglam
     rest_wavelength = wavelength/(sightline.z_qso+1)
-    #lymann forest part of this sightline, contain dlas 
+    #lymann forest part of this sightline, contain dlas
     test = (rest_wavelength>blue_limit)&(rest_wavelength<red_limit)&(sightline.error != 0)
     #when excluding the part of dla, we remove the part between central_wavelength+-delta
     #dwv = rest_wavelength[1]-rest_wavelength[0]#because we may change the re-sampling of the spectra, this need to be calculated.
@@ -260,7 +275,7 @@ def generate_summary_table(sightlines, output_dir, mode = "w"):
     sightlines: list of `dla_cnn.data_model.Sightline.Sightline` object, the sightline contained should
     contain the all data of b,r,z channel, and shouldn't be rebinned,
     output_dir: str, where the output csv file is stored, its format should be "xxxx.csv",
-    mode: str, possible values "w", "a", "w" means writing to the csv file directly(overwrite the 
+    mode: str, possible values "w", "a", "w" means writing to the csv file directly(overwrite the
     previous content), "a" means adding more data to the csv file(remaining the previous content)
     -------------------------------------------------------------------------------------------------------------------------------------------------------------------
     return:
@@ -280,7 +295,7 @@ def generate_summary_table(sightlines, output_dir, mode = "w"):
                     "wavelength_start_r":10**sightline.loglam[sightline.split_point_br],"wavelength_end_r":10**sightline.loglam[sightline.split_point_rz-1],
                 "pixel_start_r":sightline.split_point_br,"pixel_end_r":sightline.split_point_rz-1,"wavelength_start_z":10**sightline.loglam[sightline.split_point_rz],
                     "wavelength_end_z":10**sightline.loglam[-1],"pixel_start_z":sightline.split_point_rz,"pixel_end_z":len(sightline.loglam)-1}
-            
+
             dlas_col_density = ""
             dlas_central_wavelength = ""
             for dla in sightline.dlas:
@@ -288,7 +303,7 @@ def generate_summary_table(sightlines, output_dir, mode = "w"):
                 dlas_central_wavelength += str(dla.central_wavelength)+","
             info["dlas_col_density"] = dlas_col_density[:-1]
             info["dlas_central_wavelength"] = dlas_central_wavelength[:-1]
-            
+
             #write to the csv file
             summary_table_writer.writerow(info)
 #from dla_cnn.desi.DesiMock import DesiMock
@@ -303,12 +318,12 @@ def write_summary_table(nums, version,path, output_path):
     path: str, the dir of the folder which stores the given fits file, the folder's structure is like folder-fits files' id - fits files , if you are still confused, you can check the below code about read data from the fits file;
     output_path: str, the dir where the summary table is generated, and if there have been a summary table, then we will remove it and generate a new summary table;
     ------------------------------------------------------------------------------------------------------------------------------------------
-    
+
     """
     #if exists summary table before, remove it
     #if exists(output_path):
         #remove(output_path)
-        
+
     def write_as_summary_table(num):
         """
         write summary table for a single given fits file, if there have been a summary table then directly write after it, otherwise create a new one
@@ -316,7 +331,7 @@ def write_summary_table(nums, version,path, output_path):
         parameter:
         num: int, the id of the given fits file, e.g. 700
         ---------------------------------------------------------------------------------------------------------------------------------------------
-      
+
         """
         #read data from fits file
         file_path = join(path,str(num))
@@ -335,7 +350,7 @@ def write_summary_table(nums, version,path, output_path):
             generate_summary_table(sightlines,output_path,"a")
         else:
             generate_summary_table(sightlines,output_path,"w")
-    bad_files = [] #store the fits files with problems 
+    bad_files = [] #store the fits files with problems
     #for each id in nums, invoking the `write_as_summary_table` funciton
     for num in nums:
         try:
