@@ -1,0 +1,11 @@
+/var/spool/slurmd/job26871177/slurm_script: line 10: load_picca_plots: command not found
+sed: can't read /global/cfs/cdirs/desi/users/jqzou/dla_finder/desi_mock_iron1.py: No such file or directory
+/global/homes/t/tanting/.conda/envs/picca_plots/bin/python: can't open file '/global/cfs/cdirs/desi/users/jqzou/dla_finder/desi_mock_iron1.py': [Errno 2] No such file or directory
+srun: error: nid006975: task 0: Exited with exit code 2
+srun: Terminating StepId=26871177.0
+sed: can't read /global/cfs/cdirs/desi/users/jqzou/dla_finder/desi_mock_iron1.py: No such file or directory
+sed: can't read /global/cfs/cdirs/desi/users/jqzou/dla_finder/desi_mock_iron1.py: No such file or directory
+/global/homes/t/tanting/.conda/envs/picca_plots/bin/python: can't open file '/global/cfs/cdirs/desi/users/jqzou/dla_finder/desi_mock_iron1.py': [Errno 2] No such file or directory
+srun: error: nid006975: task 0: Exited with exit code 2
+srun: Terminating StepId=26871177.1
+sed: can't read /global/cfs/cdirs/desi/users/jqzou/dla_finder/desi_mock_iron1.py: No such file or directory

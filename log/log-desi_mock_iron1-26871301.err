@@ -1,0 +1,13 @@
+/var/spool/slurmd/job26871301/slurm_script: line 10: load_picca_plots: command not found
+Traceback (most recent call last):
+  File "/global/u1/t/tanting/DESI_analysis/desi-dlas-jiaqi/desi_mock_iron1.py", line 3, in <module>
+    from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
+ModuleNotFoundError: No module named 'desidlas'
+srun: error: nid006645: task 0: Exited with exit code 1
+srun: Terminating StepId=26871301.0
+Traceback (most recent call last):
+  File "/global/u1/t/tanting/DESI_analysis/desi-dlas-jiaqi/desi_mock_iron1.py", line 3, in <module>
+    from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
+ModuleNotFoundError: No module named 'desidlas'
+srun: error: nid006645: task 0: Exited with exit code 1
+srun: Terminating StepId=26871301.1

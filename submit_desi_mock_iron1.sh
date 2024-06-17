@@ -9,6 +9,8 @@
 #SBATCH --error=/global/u1/t/tanting/DESI_analysis/desi-dlas/log/log-desi_mock_iron1-%j.err
 load_picca_plots
 export dla_finder=/global/u1/t/tanting/DESI_analysis/desi-dlas
+#export dla_finder=/global/cfs/cdirs/desi/users/jqzou/dla_finder
+export desidlas=/global/cfs/cdirs/desi/users/jqzou/dla_finder
 #srun -n 1 -c 64 python $dla_finder/desi_mock_iron1.py
 for index in 0 10
 do
