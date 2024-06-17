@@ -1,0 +1,2 @@
+/var/spool/slurmd/job20439708/slurm_script: line 11: load_picca_plots: command not found
+2024-01-16 06:47:15.528570: I tensorflow/stream_executor/platform/default/dso_loader.cc:49] Successfully opened dynamic library libcudart.so.11.0

@@ -1,0 +1,9 @@
+/var/spool/slurmd/job21802771/slurm_script: line 10: load_picca_plots: command not found
+2024-02-16 09:57:37.289770: W tensorflow/stream_executor/platform/default/dso_loader.cc:60] Could not load dynamic library 'libcudart.so.11.0'; dlerror: libcudart.so.11.0: cannot open shared object file: No such file or directory; LD_LIBRARY_PATH: /global/u1/t/tanting/fitter2_tutorial/PolyChordLite/lib:/global/u1/t/tanting/DESI_analysis/theoretical_pk/fisher_forecast/openmpi-4.1.2/lib:/global/u1/t/tanting/fitter2_tutorial/PolyChordLite/lib:/global/u1/t/tanting/DESI_analysis/theoretical_pk/fisher_forecast/openmpi-4.1.2/lib:/global/common/software/nersc/pm-2022q4/sw/evp-patch/lib64:/global/u1/t/tanting/fitter2_tutorial/PolyChordLite/lib:/global/u1/t/tanting/DESI_analysis/theoretical_pk/fisher_forecast/openmpi-4.1.2/lib:/usr/local/cuda-12.2/compat:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/math_libs/12.2/lib64:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/extras/CUPTI/lib64:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/extras/Debugger/lib64:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/nvvm/lib64:/opt/nvidia/hpc_sdk/Linux_x86_64/23.9/cuda/12.2/lib64:/opt/cray/pe/papi/7.0.1.2/lib64:/opt/cray/libfabric/1.15.2.0/lib64:/opt/cray/libfabric/1.15.2.0/lib64:/opt/cray/libfabric/1.15.2.0/lib64
+2024-02-16 09:57:37.289790: I tensorflow/stream_executor/cuda/cudart_stub.cc:29] Ignore above cudart dlerror if you do not have a GPU set up on your machine.
+Traceback (most recent call last):
+  File "/global/u1/t/tanting/DESI_analysis/desi-dlas/desi_mock_iron1.py", line 102, in <module>
+    order=order+value
+NameError: name 'value' is not defined
+srun: error: nid005856: task 0: Exited with exit code 1
+srun: Terminating StepId=21802771.0
