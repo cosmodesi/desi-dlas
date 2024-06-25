@@ -4,6 +4,5 @@
 # Brought to you by:
 ## Jiaqi Zou
 ## Ben Wang
-
 ## Z. Cai
 ## J. Xavier Prochaska
