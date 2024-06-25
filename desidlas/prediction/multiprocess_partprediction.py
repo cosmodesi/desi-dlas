@@ -6,17 +6,17 @@ import argparse
 import tensorflow as tf
 import timeit
 from tensorflow.python.framework import ops
-from dla_finder.datasets.get_flux import make_dataset
-from dla_finder.parameters import kernel
+from desidlas.datasets.get_flux import make_dataset
+from desidlas.parameters import kernel
 from tqdm import tqdm
 import multiprocessing
-from dla_finder.training.parameterset import parameter_names
-from dla_finder.training.parameterset import parameters
+from desidlas.training.parameterset import parameter_names
+from desidlas.training.parameterset import parameters
 ops.reset_default_graph()
 
 
 
-from dla_finder.training.model import build_model
+from desidlas.training.model import build_model
 #from model import build_model
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession

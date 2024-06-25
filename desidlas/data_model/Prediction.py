@@ -1,6 +1,6 @@
 import scipy.signal as signal
 import numpy as np
-
+from desidlas.parameters import bias_adjust, normal_range
 
 class Prediction(object):
     def __init__(self, peaks_ixs=None, offset_hist=None, offset_conv_sum=None,
@@ -41,8 +41,7 @@ class Prediction(object):
     # Note, the bias adjustment polynomial is hard coded here, but it would more logically be stored with the model, this is time-saving shortcut for now.
     # bias_adjust learned from 5k 96451 test dataset
     def get_coldensity_for_peak(self, peak_ix,
-                                bias_adjust=0):#(0.0028149011281380278276520456870457564946264028549194,-0.0646188010849933769375041947569116018712520599365234,-0.004256561717710568779060587019102968042716383934021,23.555317918478582583929892280139029026031494140625)):
-        normal_range = 40#30
+                                bias_adjust=bias_adjust,normal_range=normal_range):
 
         is_close_dla_left = np.any((self.peaks_ixs < peak_ix) & (self.peaks_ixs >= peak_ix-normal_range*2))
         is_close_dla_right = np.any((self.peaks_ixs > peak_ix) & (self.peaks_ixs <= peak_ix+normal_range*2))

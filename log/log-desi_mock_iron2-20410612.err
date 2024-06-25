@@ -1,2 +1,0 @@
-/var/spool/slurmd/job20410612/slurm_script: line 11: load_picca_plots: command not found
-slurmstepd: error: *** JOB 20410612 ON nid005008 CANCELLED AT 2024-01-15T13:55:20 ***

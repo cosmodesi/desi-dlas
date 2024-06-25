@@ -1,12 +1,8 @@
 import numpy as np
-from desidlas.dla_cnn.spectra_utils import get_lam_data
-from desidlas.datasets.datasetting import split_sightline_into_samples
 
 class Sightline(object):
 
-    def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, 
-                split_point_rz = None,s2n = None,pixel_mask=None, zwarn=None, w1=None,w2=None,
-                w1_ivar=None,w2_ivar=None,spectype=None,objtype=None,normalize = False):
+    def __init__(self, id, ra=None,dec=None,dlas=None, flux=None, loglam=None,error=None, z_qso=None, split_point_br = None, split_point_rz = None,s2n = None, continuum = None, norm=None, normalize = False):
         """
 
         Args:
@@ -30,31 +26,28 @@ class Sightline(object):
         self.ra=ra
         self.dec=dec
         self.flux = flux
+        self.continuum = continuum
         self.loglam = loglam
         self.id = id
         self.dlas = dlas
         self.z_qso = z_qso
         self.data_makers = []
+        self.pixel_mask = []
         self.error = error # error = 1./ np.sqrt(ivar)
         self.normalize = normalize
+        self.norm = norm
         self.split_point_br = split_point_br
         self.split_point_rz = split_point_rz
         self.s2n = s2n
-        self.pixel_mask = pixel_mask 
-        self.zwarn = zwarn
-        self.w1 = w1
-        self.w2 = w2
-        self.w1_ivar = w1_ivar
-        self.w2_ivar = w2_ivar
-        self.spectype=spectype
-        self.objtype=objtype
+        
         # Attributes
         self.prediction = None
         self.classification = None
         self.offsets = None
         self.column_density = None
-# Returns the data in the legacy data1, qso_z format for code that hasn't been updated to the new format yet
 
+
+     # Returns the data in the legacy data1, qso_z format for code that hasn't been updated to the new format yet
     def get_legacy_data1_format(self):
         raw_data = {}
         raw_data['flux'] = self.flux
@@ -65,6 +58,7 @@ class Sightline(object):
         raw_data['ra'] = self.id.ra if hasattr(self.id, 'ra') else 0
         raw_data['dec'] = self.id.dec if hasattr(self.id, 'dec') else 0
         return raw_data, self.z_qso
+
 
     # Clears all fields of the DLA
     def clear(self):
@@ -77,7 +71,7 @@ class Sightline(object):
         self.data_markers = []
 
 
-    def is_lyb(self, peakix):
+    def is_lyb(self, peakix,lam_analyse):
         """
         Returns true if the given peakix (from peaks_ixs) is the ly-b of another DLA in the set peaks_ixs in prediction
         :param peakix:
@@ -85,16 +79,13 @@ class Sightline(object):
         """
         assert self.prediction is not None and peakix in self.prediction.peaks_ixs
 
-        data_split=split_sightline_into_samples(self)
-        lam_analyse=data_split[5]
-        
-        lambda_higher = (lam_analyse[peakix]) / (1025.722/1215.67)#找这个peak对应的dla
+        lambda_higher = (lam_analyse[peakix]) / (1025.722/1215.67)#corresponding dla
 
         # An array of how close each peak is to beign the ly-b of peakix in spectrum reference frame
         peak_difference_spectrum = np.abs(lam_analyse[self.prediction.peaks_ixs] - lambda_higher)
-        nearest_peak_ix = np.argmin(peak_difference_spectrum)
+        nearest_peak_ix = np.argmin(peak_difference_spectrum)#nearest peak
 
-        # get the column density of the identfied nearest peak
+        # get the column density of the identfied nearest peak算这两个的nhi
         _, potential_lya_nhi, _, _ = \
             self.prediction.get_coldensity_for_peak(self.prediction.peaks_ixs[nearest_peak_ix])
         _, potential_lyb_nhi, _, _ = \
@@ -102,10 +93,10 @@ class Sightline(object):
 
         # Validations: check that the nearest peak is close enough to match
         #              sanity check that the LyB is at least 0.3 less than the DLA
-        is_nearest_peak_within_range = peak_difference_spectrum[nearest_peak_ix] <= 15
-        is_nearest_peak_larger_coldensity = potential_lyb_nhi < potential_lya_nhi - 0.3
+        is_nearest_peak_within_range = peak_difference_spectrum[nearest_peak_ix] <= 15#<15
+        is_nearest_peak_larger_coldensity = potential_lyb_nhi < potential_lya_nhi - 0.3#>0.3？
 
-        return is_nearest_peak_within_range and is_nearest_peak_larger_coldensity#true lyb,false lya
+        return is_nearest_peak_within_range and is_nearest_peak_larger_coldensity#true is lyb，false is lya
 
 
     def get_lyb_index(self, peakix):

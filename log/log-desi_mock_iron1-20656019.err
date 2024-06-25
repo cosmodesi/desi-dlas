@@ -1,9 +1,0 @@
-/var/spool/slurmd/job20656019/slurm_script: line 11: load_picca_plots: command not found
-Traceback (most recent call last):
-  File "/global/u1/t/tanting/DESI_analysis/desi-dlas/desi_mock_iron1.py", line 46, in <module>
-    from desidlas.prediction.multiprocess_partprediction import predictions_desi
-  File "/global/u1/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/multiprocess_partprediction.py", line 6, in <module>
-    import tensorflow as tf
-ModuleNotFoundError: No module named 'tensorflow'
-srun: error: nid005652: task 0: Exited with exit code 1
-srun: Terminating StepId=20656019.0

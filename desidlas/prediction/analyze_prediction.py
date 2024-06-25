@@ -1,23 +1,10 @@
-#this module is used to combine the model's predictions for each pixel into the one sightline with several DLAs' predictions.
-import numpy as np 
-#from desidlas.data_model.Sightline import Sightline
+
+import numpy as np
 from desidlas.data_model.Prediction import Prediction
 from astropy.table import Table
 import scipy.signal as signal
 def compute_peaks(sightline,PEAK_THRESH):
-    """
-    Calculate the peak for offsets value
-    
-    Parameters:
-    -----------------------------------------------
-    sightline: 'dla_cnn.data_model.Sightline' object
-    PEAK_THRESH: float, the threshold to accept a peak=0.2
-    
-    Returns
-    -----------------------------------------------
-    sightline
-    
-    """
+                      # Threshold to accept a peak0.2
     PEAK_SEPARATION_THRESH = 0.1        # Peaks must be separated by a valley at least this low
 
     # Translate relative offsets to histogram
@@ -68,31 +55,12 @@ def compute_peaks(sightline,PEAK_THRESH):
     return sightline
 
 def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH,lam_analyse):
-    """
-    Gnerate DLA catalog for each sightline
-    
-    Parameters:
-    -----------------------------------------------
-    sightline: 'dla_cnn.data_model.Sightline' object
-    pred:list, label for every window, 0 means no DLA in this window and 1 means this window has a DLA
-    conf:list, [0,1]confidence level, label for every window, pred is 0 when conf is below the critical value (0.5 default), pred is 1 when conf is above the critical value
-    offset:list, [-60,+60] , label for every window, pixel numbers between DLA center and the window center
-    coldensity:list, label for every window, the estimated NHI column density
-    PEAK_THRESH: float, the threshold to accept a peak=0.2
-    
-    Returns
-    -----------------------------------------------
-    dla_tbl: 'astropy.table.Table' object
-    
-    """
-    #delete the offset value when pred=0
-    for i in range(0,len(pred)):
+    for i in range(0,len(pred)):#delete pred=0
         if (pred[i]==0):#or(real_classifier[i]==-1):
             offset[i]=0
     sightline.prediction = Prediction(loc_pred=pred, loc_conf=conf, offsets=offset, density_data=coldensity)
     compute_peaks(sightline,PEAK_THRESH)
     sightline.prediction.smoothed_loc_conf()
-    
     
     #generate absorbers catalog for every sightline
     dla_tbl = Table(names=('TARGET_RA','TARGET_DEC', 'Z_QSO','Z_DLA','TARGETID','S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),dtype=('float','float','float','float','int','float','str','float','float','float','str'),meta={'EXTNAME': 'DLACAT'})
@@ -103,11 +71,8 @@ def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH,lam_analyse
         peak_lam_rest=float(peak_lam_spectrum)/(1+sightline.z_qso)
         _, mean_col_density_prediction, std_col_density_prediction, bias_correction =             sightline.prediction.get_coldensity_for_peak(peak)
 
-        absorber_type =  "DLA" if mean_col_density_prediction >= 20.3 else "LYB" if sightline.is_lyb(peak) else "SUBDLA"
-        dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(z_dla),sightline.id,sightline.s2n,
-                         str(sightline.id)+'00'+str(jj), float(mean_col_density_prediction),
-                         min(1.0,float(sightline.prediction.offset_conv_sum[peak])),float(std_col_density_prediction),
-                         absorber_type))
+        absorber_type =  "DLA" if mean_col_density_prediction >= 20.3 else "LYB" if sightline.is_lyb(peak,lam_analyse) else "SUBDLA"
+        dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(z_dla),sightline.id,sightline.s2n,str(sightline.id)+'00'+str(jj),float(mean_col_density_prediction),min(1.0,float(sightline.prediction.offset_conv_sum[peak])),float(std_col_density_prediction),absorber_type))
         
     return dla_tbl
 

@@ -1,0 +1,152 @@
+""" Definitions used throughout the package"""
+#import modules
+from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
+from desidlas.datasets.DesiMock import DesiMock
+#from desidlas.dla_cnn.defs import best_v
+import numpy as np
+import os
+from os.path import join
+from pkg_resources import resource_filename
+from pathlib import Path
+#from desidlas.datasets.get_sightlines import get_sightlines
+#REST_RANGE = [900, 1346, 1748]
+#kernel = 400 # SDSS value -- UPDATE!!
+#smooth_kernel = 600
+#best_v = {'b': 62996, 'r': 44859, 'z': 34720, 'all': 44735}#the best value of rebining for each channel, its unit is m*s^(-1).
+
+'''
+#Set directory to desi iron mock spectra:
+spectrapath='/global/cfs/cdirs/desicollab/users/naimgk/ohio-p1d/v2.0/iron/main/QSO_cat_iron_main_dark_healpix_v0/v2.0.0/desi-2.15-1/spectra-16'
+#Set saving path for sightlines:
+savepath='/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/iron_ihio/sightlines'
+#Run DLA finder to get sightlines:
+item1 = os.listdir(spectrapath)
+for k in item1: 
+    itemlist=os.listdir(spectrapath+'/'+str(k)) 
+    os.mkdir(savepath+'/'+str(k)) 
+    #savedir=savepath+'/'+str(k) 
+    #os.mkdir(savedir) 
+    #item2=['10000'] 
+    for j in itemlist: 
+        datafile_path=spectrapath+'/'+str(k)+'/'+str(j) 
+        savedir=savepath+'/'+str(k) +'/'+str(j)
+        os.mkdir(savedir) 
+        spectra= os.path.join(datafile_path, 'spectra-16-%s.fits'%j) 
+        truth=[]#os.path.join(datafile_path, 'truth-16-%s.fits'%j) 
+        zbest=os.path.join(datafile_path, 'zbest-16-%s.fits'%j)
+
+        outpath=savedir+'/'+'sightlines-%s.npy'%j
+        print(spectra,truth,zbest,outpath)
+        sightlines=get_sightlines(spectra,truth,zbest,outpath)
+print('%s done'%k)
+'''
+import numpy as np
+from desidlas.prediction.pred_sightline import save_pred
+from desidlas.prediction.multiprocess_partprediction import predictions_desi
+import time
+############DESI data
+sightline_total = '/global/cfs/cdirs/desi/users/jqzou/jura/sightlines_main_dark'
+#'/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/iron_london/sightlines'
+
+list1 = os.listdir(sightline_total)
+sightline_list=[]
+partpre_list=[]
+dlacat_list=[]
+for k in list1:
+
+    list2=os.listdir(sightline_total+'/'+str(k)) 
+    for j in list2:
+        if j.endswith('-pre-sightlines.npy'):
+            sightline_list.append(sightline_total+'/'+str(k)+'/'+j) 
+            partpre_list.append(sightline_total+'/'+str(k)+'/'+j.replace('-pre-sightlines.npy','-pre-sightlines-pred.npy')) 
+            dlacat_list.append(sightline_total+'/'+str(k)+'/'+j.replace('-pre-sightlines.npy','-dlacat.fits')) 
+sightline_total_list = np.array(sightline_list)
+partpre_total_list = np.array(partpre_list)
+dlacat_total_list = np.array(dlacat_list)
+print(dlacat_total_list.shape)   
+
+for order,sightline_path in enumerate(sightline_total_list[0:10]):
+    order = order+15000
+    sightline_loc=sightline_total_list[order]#sightline_path+'/sightlines-{}.npy'.format(j)
+    partpre_loc=partpre_total_list[order]#sightline_path+'/sightlines-{}-pred.npy'.format(j)
+    dlacat_loc=dlacat_total_list[order]#sightline_path+'/dlacat-{}.fits'.format(j)
+    print(sightline_loc,partpre_loc,dlacat_loc)
+
+    start_time = time.time()
+    predictions_desi(sightline_loc,partpre_loc)
+    end_time = time.time()
+    print("Predicting sightlines time: {} seconds".format(end_time - start_time))
+    start_time = time.time()
+
+    pred=np.load(partpre_loc,allow_pickle=True)
+    sightlines=np.load(sightline_loc,allow_pickle=True)
+    
+    pred=np.load(partpre_loc,allow_pickle=True)
+    sightlines=np.load(sightline_loc,allow_pickle=True)
+    dla_tbl=save_pred(sightlines,pred,filename=dlacat_loc)
+    
+############mocks
+'''
+sightline_total = '/global/cfs/cdirs/desi/users/jqzou/jura/sightlines_main_dark'
+#'/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/iron_london/sightlines'
+
+list1 = os.listdir(sightline_total)
+sightline_list=[]
+partpre_list=[]
+dlacat_list=[]
+for k in list1:
+    list2=os.listdir(sightline_total+'/'+str(k)) 
+    for j in list2: 
+        sightline_list.append(sightline_total+'/'+str(k)+'/'+str(j)+'/sightlines-{}.npy'.format(j)) 
+        partpre_list.append(sightline_total+'/'+str(k)+'/'+str(j)+'/sightlines-{}-pred.npy'.format(j)) 
+        dlacat_list.append(sightline_total+'/'+str(k)+'/'+str(j)+'/dlacat-{}.fits'.format(j)) 
+sightline_total_list = np.array(sightline_list)
+partpre_total_list = np.array(partpre_list)
+dlacat_total_list = np.array(dlacat_list)
+print(dlacat_total_list.shape)   
+
+for order,sightline_path in enumerate(sightline_total_list[0:10]):
+    order = order+value
+    sightline_loc=sightline_total_list[order]#sightline_path+'/sightlines-{}.npy'.format(j)
+    partpre_loc=partpre_total_list[order]#sightline_path+'/sightlines-{}-pred.npy'.format(j)
+    dlacat_loc=dlacat_total_list[order]#sightline_path+'/dlacat-{}.fits'.format(j)
+    print(sightline_loc,partpre_loc,dlacat_loc)
+
+    start_time = time.time()
+    predictions_desi(sightline_loc,partpre_loc)
+    end_time = time.time()
+    print("Predicting sightlines time: {} seconds".format(end_time - start_time))
+    start_time = time.time()
+
+    pred=np.load(partpre_loc,allow_pickle=True)
+    sightlines=np.load(sightline_loc,allow_pickle=True)
+    
+    pred=np.load(partpre_loc,allow_pickle=True)
+    sightlines=np.load(sightline_loc,allow_pickle=True)
+    dla_tbl=save_pred(sightlines,pred,filename=dlacat_loc)
+'''
+
+'''
+list1 = os.listdir(sightline_total)
+for k in list1[11:-1]:
+    list2=os.listdir(sightline_total+'/'+str(k)) 
+    for j in list2: 
+        sightline_path=sightline_total+'/'+str(k)+'/'+str(j) 
+
+        sightline_loc=sightline_path+'/sightlines-{}.npy'.format(j)
+        partpre_loc=sightline_path+'/sightlines-{}-pred.npy'.format(j)
+        dlacat_loc=sightline_path+'/dlacat-{}.fits'.format(j)
+        print(sightline_loc)
+
+        start_time = time.time()
+        predictions_desi(sightline_loc,partpre_loc)
+        end_time = time.time()
+        print("Predicting sightlines time: {} seconds".format(end_time - start_time))
+        start_time = time.time()
+
+        pred=np.load(partpre_loc,allow_pickle=True)
+        sightlines=np.load(sightline_loc,allow_pickle=True)
+
+        dla_tbl=save_pred(sightlines,pred,filename=dlacat_loc)
+'''
+#check my code in /global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/multiprocess_partprediction.py and /global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/pred_sightline.py

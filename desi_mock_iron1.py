@@ -2,13 +2,13 @@
 #import modules
 from desidlas.datasets.preprocess import estimate_s2n,normalize,rebin
 from desidlas.datasets.DesiMock import DesiMock
-from desidlas.dla_cnn.defs import best_v
+#from desidlas.dla_cnn.defs import best_v
 import numpy as np
 import os
 from os.path import join
 from pkg_resources import resource_filename
 from pathlib import Path
-from desidlas.datasets.get_sightlines import get_sightlines
+#from desidlas.prediction import get_sightlines
 #REST_RANGE = [900, 1346, 1748]
 #kernel = 400 # SDSS value -- UPDATE!!
 #smooth_kernel = 600
@@ -65,7 +65,7 @@ partpre_total_list = np.array(partpre_list)
 dlacat_total_list = np.array(dlacat_list)
 print(dlacat_total_list.shape)   
 
-for order,sightline_path in enumerate(sightline_total_list[value:1value]):
+for order,sightline_path in enumerate(sightline_total_list[0:10]):
     order = order+value
     sightline_loc=sightline_total_list[order]#sightline_path+'/sightlines-{}.npy'.format(j)
     partpre_loc=partpre_total_list[order]#sightline_path+'/sightlines-{}-pred.npy'.format(j)
