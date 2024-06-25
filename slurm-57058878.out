@@ -1,5 +1,0 @@
-slurmstepd: error: Detected 1 oom-kill event(s) in StepId=57058878.0. Some of your processes may have been killed by the cgroup out-of-memory handler.
-srun: error: nid02099: task 0: Out Of Memory
-srun: launch/slurm: _step_signal: Terminating StepId=57058878.0
-Command exited with non-zero status 1
-176.63Real 0.05user 0.05system 0%CPU 23304
