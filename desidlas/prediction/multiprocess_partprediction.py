@@ -110,7 +110,7 @@ def predictions_desi(pred_sightlines,savefile):
     iteration_num = 0
 
     r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
-    p=multiprocessing.Pool(processes=30)
+    p=multiprocessing.Pool(processes=256)
     results=p.map(pred_sightline,tqdm(r.ravel()))
     
     #dataset[sightline.id]={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
