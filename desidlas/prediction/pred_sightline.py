@@ -10,8 +10,11 @@ from desidlas.prediction.analyze_prediction import analyze_pred
 from astropy.table import Table, vstack
 from desidlas.parameters import PEAK_THRESH,level
 from tqdm import tqdm
+import multiprocessing
 
 def save_pred(sightlines,pred,PEAK_THRESH=PEAK_THRESH,level=level,filename=None):
+    pred=np.load(pred,allow_pickle=True)
+    sightlines=np.load(sightlines,allow_pickle=True)
     pred_abs = Table(names=('TARGET_RA','TARGET_DEC', 'Z_QSO','Z_DLA','TARGETID','S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),dtype=('float','float','float','float','int','float','str','float','float','float','str'),meta={'EXTNAME': 'DLACAT'})
     for ii in tqdm(range(0,len(sightlines))):
         sightline=sightlines[ii]
@@ -37,6 +40,12 @@ def save_pred(sightlines,pred,PEAK_THRESH=PEAK_THRESH,level=level,filename=None)
             pred_abs=vstack((pred_abs,analyze_pred(sightline,classifier,conf,offset,coldensity,PEAK_THRESH,lam_analyse)))
     pred_abs.write(filename,overwrite=True)
     return pred_abs
+
+def save_pred_all(sightline_loc,partpre_loc,dlacat_loc):
+    cpu_count=256
+    task_data = [(sightline_loc[i], partpre_loc[i], PEAK_THRESH, level, dlacat_loc[i]) for i in range(len(sightline_loc))]
+    with multiprocessing.Pool(cpu_count) as pool:
+        pool.starmap(save_pred, task_data)
 
 def label_catalog(real_catalog,pred_catalog,realname=None,predname=None):
     
