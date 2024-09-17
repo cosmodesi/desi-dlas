@@ -100,7 +100,6 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
                 hyperparameters[parameter_names[k]] = parameters[k][0]
         (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux,checkpoint_filename[model], TF_DEVICE='')#/gpu:1
         dataset={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
-        #np.save(savefile,dataset)
         return dataset
 
 def execute_single_task(task_id, data_entries, savefile, cpu_count):
@@ -115,14 +114,7 @@ def predictions_desi(pred_sightlines,savefile):
     tf.get_logger().setLevel(logging.WARNING)
     exception_counter = 0
     iteration_num = 0
-    
-    '''
-    r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
-    p=multiprocessing.Pool(processes=256)
-    results=p.starmap(pred_sightline,tqdm([pred_sightlines,savefile]))
-    np.save(savefile,results)
-    
-    '''
+
     total_cpu_count=256
     num_tasks=len(pred_sightlines)
     cpu_per_task = total_cpu_count // num_tasks
@@ -136,32 +128,6 @@ def predictions_desi(pred_sightlines,savefile):
     for p in processes:
         p.join()
     
-    
-    #p=multiprocessing.Pool(processes=256)
-    #if type(pred_sightlines)=='list':
-    #for index in range(len(pred_sightlines)):
-    #     results=p.map(pred_sightlines[index],tqdm(pred_sightlines.ravel()))
-    #     np.save(savefile[index],results)    
-    #else:
-    #    r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
-    #    p=multiprocessing.Pool(processes=256)
-    #    results=p.map(pred_sightline,tqdm(r.ravel()))
-    #    np.save(savefile,results)
-    
-    
-    
-    
-    
-    '''
-    r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
-    p=multiprocessing.Pool(processes=256)
-    results=p.map(pred_sightline,tqdm(r.ravel()))
-    
-    #dataset[sightline.id]={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
-            
-
-    np.save(savefile,results)
-    '''
     
     
    
