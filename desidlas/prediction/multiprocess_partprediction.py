@@ -79,8 +79,8 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
 
     return pred, conf, offset, coldensity #return four labels
 
-def pred_sightline(pred_sightlines,savefile):#sightline
-    sightline=np.load(pred_sightlines,allow_pickle = True,encoding='latin1').ravel()
+def pred_sightline(sightline):#sightline#pred_sightlines,savefile
+    #sightline=np.load(pred_sightlines,allow_pickle = True,encoding='latin1').ravel()
     
     #parameters
     matrix_size={'high':1,'mid':1,'low':4}
@@ -100,7 +100,7 @@ def pred_sightline(pred_sightlines,savefile):#sightline
                 hyperparameters[parameter_names[k]] = parameters[k][0]
         (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux,checkpoint_filename[model], TF_DEVICE='')#/gpu:1
         dataset={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
-        np.save(savefile,dataset)
+        #np.save(savefile,dataset)
         return dataset
 
 def execute_single_task(task_id, data_entries, savefile, cpu_count):
