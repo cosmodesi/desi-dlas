@@ -31,6 +31,7 @@ def get_sightlines(spectra,truth,zbest,outpath,v=best_v['all']):
     specs = DesiMock()
     specs.read_fits_file(spectra,truth,zbest)
     keys = list(specs.data.keys())
+    #print(keys,specs.data)
     for jj in tqdm(keys):
         sightline = specs.get_sightline(jj,camera = 'all', rebin=False, normalize=False)
         if (sightline.z_qso >= 2.1)&(sightline.spectype =='QSO'):#apply filtering

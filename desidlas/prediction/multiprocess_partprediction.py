@@ -119,14 +119,20 @@ def predictions_desi(pred_sightlines,savefile):
     num_tasks=len(pred_sightlines)
     cpu_per_task = total_cpu_count // num_tasks
     processes = []
-    for task_id in range(num_tasks):
-        r=np.load(pred_sightlines[task_id],allow_pickle = True,encoding='latin1')
-        p = multiprocessing.Process(target=execute_single_task, args=(task_id, tqdm(r.ravel()), savefile[task_id], cpu_per_task))
-        processes.append(p)
-        p.start()  
+    
+    if type(pred_sightlines)==str:
+        r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
+        results=pred_sightline(tqdm(r.ravel()))
+        np.save(savefile,results)
+    else:
+        for task_id in range(num_tasks):
+            r=np.load(pred_sightlines[task_id],allow_pickle = True,encoding='latin1')
+            p = multiprocessing.Process(target=execute_single_task, args=(task_id, tqdm(r.ravel()), savefile[task_id], cpu_per_task))
+            processes.append(p)
+            p.start()  
 
-    for p in processes:
-        p.join()
+        for p in processes:
+            p.join()
     
     
     
