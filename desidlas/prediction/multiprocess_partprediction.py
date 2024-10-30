@@ -105,6 +105,8 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
 def execute_single_task(task_id, data_entries, savefile, cpu_count):
     with multiprocessing.Pool(cpu_count) as pool:
         results=pool.map(pred_sightline, data_entries)
+        pool.close()
+        pool.join() 
         np.save(savefile,results)
 
 
@@ -130,7 +132,6 @@ def predictions_desi(pred_sightlines,savefile):
             p = multiprocessing.Process(target=execute_single_task, args=(task_id, tqdm(r.ravel()), savefile[task_id], cpu_per_task))
             processes.append(p)
             p.start()  
-
         for p in processes:
             p.join()
     
