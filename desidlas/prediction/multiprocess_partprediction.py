@@ -83,13 +83,14 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
     #sightline=np.load(pred_sightlines,allow_pickle = True,encoding='latin1').ravel()
     
     #parameters
-    matrix_size={'high':1,'mid':1,'low':4}
-    INPUT_SIZE={'high':400,'mid':400,'low':600}
+    matrix_size={'high':1,'mid':1,'low':4, 'nhi':1}
+    INPUT_SIZE={'high':400,'mid':400,'low':600,'nhi':1}
 
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'}
+    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999','nhi':'/global/homes/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/model/train_highnhi/train_highnhi/current_199999'}
     hyperparameters = {}
     if sightline != []:
         flux,lam=make_dataset(sightline)
+        '''
         if sightline.s2n<3:
             model='low'
             for k in range(0,len(parameter_names)):
@@ -98,6 +99,10 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
             model='mid'
             for k in range(0,len(parameter_names)):
                 hyperparameters[parameter_names[k]] = parameters[k][0]
+        '''
+        model='nhi'
+        for k in range(0,len(parameter_names)):
+            hyperparameters[parameter_names[k]] = parameters[k][0]
         (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux,checkpoint_filename[model], TF_DEVICE='')#/gpu:1
         dataset={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
         return dataset
