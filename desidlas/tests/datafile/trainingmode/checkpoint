@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/tanting1397/DESI_CNN/desi-dlas/desidlas/tests/datafile/trainingmode/github_validation_datasets.npy.ckpt"
+all_model_checkpoint_paths: "/home/tanting1397/DESI_CNN/desi-dlas/desidlas/tests/datafile/trainingmode/github_validation_datasets.npy.ckpt"

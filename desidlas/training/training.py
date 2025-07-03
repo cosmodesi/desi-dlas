@@ -308,7 +308,7 @@ if __name__ == '__main__':
     savemodel_path=os.path.join(save_path, 'train_highsnr','current')
     savebatch_path=os.path.join(save_path, 'train_highsnr','batch_results.csv')
     
-    DEFAULT_TRAINING_ITERS = 100000 #30000
+    DEFAULT_TRAINING_ITERS = 100 #30000
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--hyperparamsearch', help='Run hyperparam search', required=False, action='store_true', default=False)
     parser.add_argument('-o', '--output_file', help='Hyperparam csv result file location', required=False, default=savebatch_path)
@@ -331,7 +331,6 @@ if __name__ == '__main__':
 
     train_dataset = Dataset(args['train_dataset_filename'])
     test_dataset = Dataset(args['test_dataset_filename'])
-
     exception_counter = 0
     iteration_num = 0
 
@@ -353,5 +352,7 @@ if __name__ == '__main__':
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,
     last_coldensity_rmse) = train_ann(hyperparameters, train_dataset, test_dataset,INPUT_SIZE,matrix_size,
                                     save_filename=checkpoint_filename, load_filename=args['loadmodel'])
+    test_dataset.close()
+    train_dataset.close()
 
     

@@ -8,15 +8,15 @@ class Dataset:
         self.future = None
 
         self.data = None
-        print(datafiles,glob.glob(datafiles))
+        #print(datafiles,glob.glob(datafiles))
         self.filenames = glob.glob(datafiles)#datafiles
         self.sample_count = 0
         #print(self.filenames)
         assert len(self.filenames) > 0
         for ff in self.filenames:
-            r= vars(np.load(ff,allow_pickle = True,encoding='latin1').item())
-            import pdb
-            pdb.set_trace()
+            r= np.load(ff,allow_pickle = True,encoding='latin1').item()#vars(np.load(ff,allow_pickle = True,encoding='latin1').item())
+            #import pdb
+            #pdb.set_trace()
             for f in r.keys():
                 n_samples = len(r[f]['labels_classifier']) 
                 self.sample_count += n_samples
@@ -32,7 +32,13 @@ class Dataset:
         self.ix_permutation = np.random.permutation(self.sample_count)
         self.get_next_buffer()
         self.batch_range = np.random.permutation(self.BUFFERSIZE)       # used to iterate through the already permuted buffer
-
+        
+    def close(self):
+        if self.p:
+            self.p.close()
+            self.p.join()
+            #self.p = None
+            
     @property
     def fluxes(self):
         return self.data['fluxes']

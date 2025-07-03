@@ -77,7 +77,8 @@ class DesiMock:
         #extract dla data from truth for mock
         if truth_path !=[]:
             truth = fits.open(truth_path)
-            if truth[3].data ==None:
+            #print(truth,truth[3].columns)
+            if truth[3].data is None:
                 spec_dlas={}
             else:
                 dlas_data = truth[3].data[truth[3].data.copy()['NHI']>19.3]

@@ -1,0 +1,6 @@
+step 000000, classify-offset-density acc/loss - RMSE/loss      0.498/8294.083 - 118.841/1722984.875 - 9.736/29002.326
+             test accuracy/offset RMSE/density RMSE:     0.500 / 326.136 / 34.098step 000200, classify-offset-density acc/loss - RMSE/loss      1.000/4312.222 - 1.036/151.582 - 0.721/4434.486
+step 000400, classify-offset-density acc/loss - RMSE/loss      1.000/3933.604 - 0.614/68.534 - 0.561/4004.303
+step 000600, classify-offset-density acc/loss - RMSE/loss      1.000/3785.367 - 0.611/77.726 - 0.603/3868.932
+step 000800, classify-offset-density acc/loss - RMSE/loss      1.000/3674.292 - 0.681/99.289 - 0.816/3832.175
+             test accuracy/offset RMSE/density RMSE:     0.500 / 75.226 / 134.566
