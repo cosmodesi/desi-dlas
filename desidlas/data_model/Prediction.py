@@ -58,9 +58,8 @@ class Prediction(object):
         if len(col_densities) == 0:
             import pdb; pdb.set_trace()
         mean_col_density = np.mean(col_densities)
-        bias_correction = np.polyval(bias_adjust, mean_col_density) - mean_col_density if bias_adjust else 0.0
-
-        return col_densities + bias_correction, \
+        bias_correction = np.polyval(bias_adjust, mean_col_density) - mean_col_density if bias_adjust else 0.0#np.zeros(len(col_densities))
+        return np.array(col_densities) + bias_correction, \
                mean_col_density + bias_correction, \
                np.std(col_densities), \
                bias_correction

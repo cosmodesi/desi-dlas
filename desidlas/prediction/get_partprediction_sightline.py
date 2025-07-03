@@ -83,11 +83,11 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
 def predictions_desi(pred_sightlines,savefile):
 
     #parameters
-    matrix_size={'high':1,'mid':1,'low':4}
-    INPUT_SIZE={'high':400,'mid':400,'low':600}
+    matrix_size={'high':1,'mid':1,'low':4,'nhi':1}
+    INPUT_SIZE={'high':400,'mid':400,'low':600,'nhi':400}
 
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'}
-    
+    #checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'}
+    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999','nhi':'/global/homes/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/model/train_highnhi/train_highnhi/current_199999'}
 
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
 
@@ -117,6 +117,10 @@ def predictions_desi(pred_sightlines,savefile):
 
     for sightline in tqdm(r.ravel()):
         flux,lam=make_dataset(sightline)
+        model='nhi'
+        for k in range(0,len(parameter_names)):
+            hyperparameters[parameter_names[k]] = parameters[k][0]
+        '''
         if sightline.s2n<3:
             model='low'
             for k in range(0,len(parameter_names)):
@@ -125,6 +129,8 @@ def predictions_desi(pred_sightlines,savefile):
             model='mid'
             for k in range(0,len(parameter_names)):
                 hyperparameters[parameter_names[k]] = parameters[k][0]
+
+        '''
         '''
         elif sightline.s2n<6:
             #model='mid'

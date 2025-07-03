@@ -73,7 +73,7 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
                     sess.run([t('prediction'), t('output_classifier'), t('y_nn_offset'), t('y_nn_coldensity')],
                              feed_dict={t('x'):                 flux[i:i+BATCH_SIZE,:],
                                         t('keep_prob'):         1.0}) #get prediction labels
-
+    #print(pred, conf, offset, coldensity)
     #print("Localize Model processed {:d} samples in chunks of {:d} in {:0.1f} seconds".format(
     #      n_samples, BATCH_SIZE, timeit.default_timer() - timer))
 
@@ -84,36 +84,81 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
     
     #parameters
     matrix_size={'high':1,'mid':1,'low':4, 'nhi':1}
-    INPUT_SIZE={'high':400,'mid':400,'low':600,'nhi':1}
+    INPUT_SIZE={'high':400,'mid':400,'low':600,'nhi':400}
 
     checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999','nhi':'/global/homes/t/tanting/DESI_analysis/desi-dlas/desidlas/prediction/model/train_highnhi/train_highnhi/current_199999'}
     hyperparameters = {}
-    if sightline != []:
+    #sightline = list(sightline)  # 转换成真正的 list
+    #import pdb
+    #pdb.set_trace()
+    if sightline is None:#any(sightline):# != []:
+        return None
+    else:
         flux,lam=make_dataset(sightline)
-        '''
-        if sightline.s2n<3:
-            model='low'
-            for k in range(0,len(parameter_names)):
-                hyperparameters[parameter_names[k]] = parameters[k][0]
-        else:#s2n>3 use mid model
-            model='mid'
-            for k in range(0,len(parameter_names)):
-                hyperparameters[parameter_names[k]] = parameters[k][0]
-        '''
+        
+        #if sightline.s2n<3:
+        #    model='low'
+        #    for k in range(0,len(parameter_names)):
+        #        hyperparameters[parameter_names[k]] = parameters[k][0]
+        #else:#s2n>3 use mid model
+        #    model='mid'
+        #    for k in range(0,len(parameter_names)):
+        #        hyperparameters[parameter_names[k]] = parameters[k][0]
+        
         model='nhi'
         for k in range(0,len(parameter_names)):
             hyperparameters[parameter_names[k]] = parameters[k][0]
+        
         (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux,checkpoint_filename[model], TF_DEVICE='')#/gpu:1
-        dataset={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
+        #dataset={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
+        dataset={'pred':pred.tolist(),'conf':conf.tolist(),'offset': offset.tolist(), 'coldensity':coldensity.tolist(), 'lam':lam.tolist() }
+
+        #import gc
+        #del flux
+        #del lam
+        #tf.compat.v1.reset_default_graph()
+        #gc.collect()
+
         return dataset
 
-def execute_single_task(task_id, data_entries, savefile, cpu_count):
+
+def execute_single_task(task_id, data_entries, savefile, cpu_count):#(file_path, save_path, cpu_count):#(task_id, data_entries, savefile, cpu_count):
+    '''
+    import numpy as np
+    from multiprocessing import Pool
+    from tqdm import tqdm
+
+    r = np.load(file_path, allow_pickle=True, encoding='latin1')
+    data_entries = r.ravel().tolist()  # 确保可序列化
+
+    with Pool(cpu_count) as pool:
+        results = list(tqdm(pool.imap(pred_sightline, data_entries), total=len(data_entries)))
+    np.save(save_path, results, allow_pickle=True)
+    '''
+    
     with multiprocessing.Pool(cpu_count) as pool:
-        results=pool.map(pred_sightline, data_entries)
+        #results=pool.map(pred_sightline, tqdm(data_entries))
+        results = pool.map(pred_sightline, data_entries)
         pool.close()
         pool.join() 
-        np.save(savefile,results)
+        #np.save(savefile,results)
+        np.save(savefile, results, allow_pickle=True)
+    
 
+    '''
+    with multiprocessing.Pool(cpu_count) as pool:
+        results = pool.map(pred_sightline, data_entries)  # 每个 entry 是一个 Sightline
+        np.save(savefile, results)
+    '''
+    #results = pred_sightline(data_entries)  # 每个 entry 是一个 Sightline
+    #np.save(savefile, results)
+    '''
+    results = []
+    for sl in tqdm(data_entries):  # 遍历每一个 sightline
+        result = pred_sightline(sl)  # sl 是单个 Sightline
+        results.append(result)
+    np.save(savefile, results)
+    '''
 
 def predictions_desi(pred_sightlines,savefile):
 
@@ -126,20 +171,52 @@ def predictions_desi(pred_sightlines,savefile):
     num_tasks=len(pred_sightlines)
     cpu_per_task = total_cpu_count // num_tasks
     processes = []
+
+    '''
+    for task_id in range(num_tasks):
+        file_path = pred_sightlines[task_id]
+        save_path = savefile[task_id]
+        p = multiprocessing.Process(target=execute_single_task, args=(file_path, save_path, cpu_per_task))
+        processes.append(p)
+        p.start()
+
+    for p in processes:
+        p.join()
+    '''
     
     if type(pred_sightlines)==str:
         r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
         results=pred_sightline(tqdm(r.ravel()))
         np.save(savefile,results)
-    else:
+    else:    
         for task_id in range(num_tasks):
             r=np.load(pred_sightlines[task_id],allow_pickle = True,encoding='latin1')
             p = multiprocessing.Process(target=execute_single_task, args=(task_id, tqdm(r.ravel()), savefile[task_id], cpu_per_task))
             processes.append(p)
             p.start()  
+    
         for p in processes:
             p.join()
+
     
+    '''
+        for task_id in range(num_tasks):
+            r=np.load(pred_sightlines[task_id],allow_pickle = True,encoding='latin1')#tqdm(r.ravel())
+            
+            data_entries = r.ravel().tolist()  # 转成纯列表，确保可序列化
+            p = multiprocessing.Process(
+                target=execute_single_task,
+                args=(task_id, data_entries, savefile[task_id], cpu_per_task)
+            )
+            
+            #p = multiprocessing.Process(target=execute_single_task, args=(task_id, tqdm(r.ravel()), savefile[task_id], cpu_per_task))
+            processes.append(p)
+            p.start()  
+        for p in processes:
+            p.join()
+    '''
+        
+
     
     
    

@@ -37,6 +37,7 @@ def save_pred(sightlines,pred,PEAK_THRESH=PEAK_THRESH,level=level,filename=None)
             #classifier=pred[sightline.id]['pred']
             #offset=pred[sightline.id]['offset']
             #coldensity=pred[sightline.id]['coldensity']
+            #print(analyze_pred(sightline,classifier,conf,offset,coldensity,PEAK_THRESH,lam_analyse))
             pred_abs=vstack((pred_abs,analyze_pred(sightline,classifier,conf,offset,coldensity,PEAK_THRESH,lam_analyse)))
     pred_abs.write(filename,overwrite=True)
     return pred_abs

@@ -13,6 +13,7 @@ def smooth_flux(flux):
     return flux_matrix
     
 def make_dataset(sightline):
+    '''
     if sightline.s2n>3:
         data_split=split_sightline_into_samples(sightline,kernel=kernel['highsnr'])
         flux=np.vstack([data_split[0]])
@@ -20,6 +21,9 @@ def make_dataset(sightline):
         data_split=split_sightline_into_samples(sightline,kernel=kernel['lowsnr'])
         flux=np.vstack([data_split[0]])
         flux=np.array(smooth_flux(flux))
+    '''
+    data_split=split_sightline_into_samples(sightline,kernel=kernel['highsnr'])
+    flux=np.vstack([data_split[0]])
      #labels_classifier=np.hstack([data_split[1]])
      #labels_offset=np.hstack([data_split[2]])
      #col_density=np.hstack([data_split[3]])
