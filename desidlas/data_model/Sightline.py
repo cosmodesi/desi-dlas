@@ -78,12 +78,15 @@ class Sightline(object):
         :return: boolean
         """
         assert self.prediction is not None and peakix in self.prediction.peaks_ixs
+        lam_analyse = np.array(lam_analyse)
 
         lambda_higher = (lam_analyse[peakix]) / (1025.722/1215.67)#corresponding dla
 
         # An array of how close each peak is to beign the ly-b of peakix in spectrum reference frame
-        peak_difference_spectrum = np.abs(lam_analyse[self.prediction.peaks_ixs] - lambda_higher)
-        nearest_peak_ix = np.argmin(peak_difference_spectrum)#nearest peak
+        peaks_ixs = self.prediction.peaks_ixs
+        peak_difference_spectrum = np.abs(lam_analyse[peaks_ixs] - lambda_higher)
+        nearest_peak_ix = np.argmin(peak_difference_spectrum)
+        #nearest_peak_ix = np.argmin(peak_difference_spectrum)#nearest peak
 
         # get the column density of the identfied nearest peak算这两个的nhi
         _, potential_lya_nhi, _, _ = \
