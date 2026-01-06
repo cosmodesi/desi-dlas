@@ -3,7 +3,7 @@
 
 # In[1]:
 
-
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from desidlas.prediction.analyze_prediction import analyze_pred
@@ -12,6 +12,94 @@ from desidlas.parameters import PEAK_THRESH,level
 from tqdm import tqdm
 import multiprocessing
 
+
+from astropy.io import fits
+from astropy.table import Table
+from pathlib import Path
+
+def save_pred(sightlines, pred, PEAK_THRESH=PEAK_THRESH, level=level, filename=None):
+    pred = np.load(pred, allow_pickle=True)
+    sightlines = np.load(sightlines, allow_pickle=True)
+
+    rows = []
+    for ii in range(len(sightlines)):
+        sightline = sightlines[ii]
+        
+        # 跳过空sightline
+        if sightline == [] or sightline is None:
+            continue
+        
+        # 跳过预测失败的
+        if pred[ii] is None:
+            continue
+        
+        try:
+            # 修复：安全获取lam
+            lam_data = pred[ii]['lam']
+            if isinstance(lam_data, np.ndarray):
+                if lam_data.ndim == 2:
+                    lam_analyse = lam_data[0]
+                elif lam_data.ndim == 1:
+                    lam_analyse = lam_data
+                else:
+                    # 如果是更高维度，取第一个
+                    lam_analyse = lam_data.flatten()
+            else:
+                # 如果是标量或其他，直接使用
+                lam_analyse = lam_data
+            
+            conf        = pred[ii]['conf']
+            classifier  = pred[ii]['pred']
+            offset      = pred[ii]['offset']
+            coldensity  = pred[ii]['coldensity']
+
+            tab = analyze_pred(sightline, classifier, conf, offset, coldensity, PEAK_THRESH, lam_analyse)
+            
+            for row in tab:
+                rows.append({name: row[name] for name in tab.colnames})
+                
+        except Exception as e:
+            print(f"  Warning: Error analyzing sightline {ii}: {e}")
+            # 调试信息
+            if pred[ii] is not None:
+                print(f"    lam shape: {pred[ii]['lam'].shape if hasattr(pred[ii]['lam'], 'shape') else type(pred[ii]['lam'])}")
+                print(f"    lam type: {type(pred[ii]['lam'])}")
+            continue
+
+    # 创建输出表
+    if len(rows) == 0:
+        out = Table(names=('TARGET_RA','TARGET_DEC','Z_QSO','Z_DLA','TARGETID',
+                          'S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),
+                   dtype=('float','float','float','float','int','float','U50','float','float','float','U10'))
+    else:
+        out = Table(rows=rows, names=('TARGET_RA','TARGET_DEC','Z_QSO','Z_DLA','TARGETID',
+                                      'S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'))
+
+    if filename is None:
+        raise ValueError("filename must be provided")
+    
+    Path(filename).parent.mkdir(parents=True, exist_ok=True)
+    out.write(filename, overwrite=True)
+    
+    return out
+
+
+
+
+def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
+    assert len(sightline_loc) == len(partpre_loc) == len(dlacat_loc)
+    for i in tqdm(range(len(sightline_loc)), total=len(sightline_loc)):
+        try:
+            Path(dlacat_loc[i]).parent.mkdir(parents=True, exist_ok=True)
+            save_pred(sightline_loc[i], partpre_loc[i], 
+                     PEAK_THRESH=PEAK_THRESH, level=level, filename=dlacat_loc[i])
+        except Exception as e:
+            print(f"\nError processing file {i}: {e}")
+            import traceback
+            traceback.print_exc()
+            continue
+
+'''
 def save_pred(sightlines,pred,PEAK_THRESH=PEAK_THRESH,level=level,filename=None):
     pred=np.load(pred,allow_pickle=True)
     sightlines=np.load(sightlines,allow_pickle=True)
@@ -40,13 +128,39 @@ def save_pred(sightlines,pred,PEAK_THRESH=PEAK_THRESH,level=level,filename=None)
             pred_abs=vstack((pred_abs,analyze_pred(sightline,classifier,conf,offset,coldensity,PEAK_THRESH,lam_analyse)))
     pred_abs.write(filename,overwrite=True)
     return pred_abs
-
+'''
+'''
 def save_pred_all(sightline_loc,partpre_loc,dlacat_loc):
     cpu_count=256
     task_data = [(sightline_loc[i], partpre_loc[i], PEAK_THRESH, level, dlacat_loc[i]) for i in range(len(sightline_loc))]
     with multiprocessing.Pool(cpu_count) as pool:
         pool.starmap(save_pred, task_data)
+'''
+'''
+def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
+    # 顺序版（最稳）
+    for i in tqdm(range(len(sightlines)), total=len(sightlines)):
+        save_pred(sightline_loc[i], partpre_loc[i],
+                  PEAK_THRESH=PEAK_THRESH, level=level, filename=dlacat_loc[i])
+'''
+'''
+def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
+    assert len(sightline_loc) == len(partpre_loc) == len(dlacat_loc), \
+        "输入列表长度不一致"
 
+    for s_path, p_path, out_path in tqdm(
+        list(zip(sightline_loc, partpre_loc, dlacat_loc)),
+        total=len(sightline_loc)
+    ):
+        # 确保输出目录存在
+        os.makedirs(os.path.dirname(out_path), exist_ok=True)
+
+        # 将预测 npy → 解析为 DLACAT（保持你原有的 save_pred 接口）
+        save_pred(s_path, p_path,
+                  PEAK_THRESH=PEAK_THRESH,
+                  level=level,
+                  filename=out_path)
+'''
 def label_catalog(real_catalog,pred_catalog,realname=None,predname=None):
     
     #uesd for drawing histogram

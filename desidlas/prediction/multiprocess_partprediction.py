@@ -1,142 +1,247 @@
+# multiprocess_partprediction.py — GPU快速推理版(修正多维输入)
+import os, re, sys, timeit, logging
 import numpy as np
-import math
-import re, os, traceback, sys, json
-sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
-import argparse
-import tensorflow as tf
-import logging
-import timeit
-from tensorflow.python.framework import ops
-from desidlas.datasets.get_flux import make_dataset
-from desidlas.parameters import kernel
 from tqdm import tqdm
-import multiprocessing
-from desidlas.training.parameterset import parameter_names
-from desidlas.training.parameterset import parameters
-ops.reset_default_graph()
 
+# ---- 搜索路径 ----
+sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
 
-
-from desidlas.training.model import build_model
-#from model import build_model
+# ---- TensorFlow TF1风格设置 ----
+import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
 from tensorflow.compat.v1 import ConfigProto
-from tensorflow.compat.v1 import InteractiveSession
 
 config = ConfigProto()
 config.gpu_options.allow_growth = True
-config.allow_soft_placement=True
-tensor_regex = re.compile('.*:\d*')
-# Get a tensor by name, convenience method
-def t(tensor_name):
-    tensor_name = tensor_name+":0" if not tensor_regex.match(tensor_name) else tensor_name
-    return tf.compat.v1.get_default_graph().get_tensor_by_name(tensor_name)
+config.allow_soft_placement = True
+config.intra_op_parallelism_threads = 2
+config.inter_op_parallelism_threads = 2
 
+# 线程数控制
+os.environ.setdefault("OMP_NUM_THREADS", "2")
+os.environ.setdefault("MKL_NUM_THREADS", "2")
 
+# ---- 项目依赖 ----
+from desidlas.datasets.get_flux import make_dataset
+from desidlas.training.parameterset import parameter_names, parameters
+from desidlas.training.model import build_model
 
+# ---- 模型常量(全局) ----
+MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 4}
+INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 600}
+CKPT = {
+    'high': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
+    'mid':  '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
+    'low':  '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+}
 
+# ---- 工具函数 ----
+def _get_handles(graph):
+    x = graph.get_tensor_by_name('x:0')
+    keep_prob = graph.get_tensor_by_name('keep_prob:0')
+    t_pred = graph.get_tensor_by_name('prediction:0')
+    t_conf = graph.get_tensor_by_name('output_classifier:0')
+    t_off = graph.get_tensor_by_name('y_nn_offset:0')
+    t_col = graph.get_tensor_by_name('y_nn_coldensity:0')
+    return x, keep_prob, t_pred, t_conf, t_off, t_col
 
-def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_filename, TF_DEVICE=''):
-    '''
-    Perform training
-    Parameters
-    ----------
-    hyperparameters:hyperparameters for the CNN model structure
-    flux:list (400 or 600 length), flux from sightline
-    checkpoint_filename: CNN model file used to detect DLAs
-    TF_DEVICE: use which gpu to train, default is '/gpu:1'
+def get_hparams(model: str):
+    hp = {}
+    for k in range(len(parameter_names)):
+        hp[parameter_names[k]] = parameters[k][0]
+    return hp
 
-    Returns
-    -------
-    pred:0 or 1, label for every window, 0 means no DLA in this window and 1 means this window has a DLA
-    conf:[0,1], confidence level, label for every window, pred is 0 when conf is below the critical value (0.5 default), pred is 1 when conf is above the critical value
-    offset: [-60,+60] , label for every window, pixel numbers between DLA center and the window center
-    coldensity:label for every window, the estimated NHI column density
+# ---- 全局会话缓存 ----
+_SESSION_CACHE = {}
 
-    '''
+def _get_model_session(model_key, INPUT_SIZE, matrix_size, ckpt_path):
+    """每种模型只加载一次"""
+    if model_key in _SESSION_CACHE:
+        print(f"[MODEL] reuse cached → {model_key}", flush=True)
+        return _SESSION_CACHE[model_key]
 
-    timer = timeit.default_timer() # import timer to record time used for every prediction
-    BATCH_SIZE = 4000
-    n_samples = flux.shape[0]
-    pred = np.zeros((n_samples,), dtype=np.float32)
-    conf = np.copy(pred)
-    offset = np.copy(pred)
-    coldensity = np.copy(pred) #establish 4 empty list to save label values
+    print(f"[MODEL] build+restore start → {model_key} ({ckpt_path})", flush=True)
+    hparams = get_hparams(model_key)
 
+    g = tf.Graph()
+    with g.as_default():
+        build_model(hyperparameters=hparams, INPUT_SIZE=INPUT_SIZE, matrix_size=matrix_size)
+        print(f"[MODEL] graph built → {model_key}", flush=True)
+        sess = tf.compat.v1.Session(graph=g, config=config)
+        with sess.as_default():
+            saver = tf.compat.v1.train.Saver()
+            saver.restore(sess, ckpt_path + ".ckpt")
+        print(f"[MODEL] checkpoint restored → {model_key}", flush=True)
+        handles = _get_handles(g)
 
-    with tf.Graph().as_default():
-        build_model(hyperparameters,INPUT_SIZE,matrix_size) # build the CNN model according to hyperparameters
+    _SESSION_CACHE[model_key] = (g, sess, handles)
+    return _SESSION_CACHE[model_key]
 
-        with tf.device(TF_DEVICE), tf.compat.v1.Session() as sess:
-            tf.compat.v1.train.Saver().restore(sess, checkpoint_filename+".ckpt") #load model files
-            for i in range(0,n_samples,BATCH_SIZE):
-                pred[i:i+BATCH_SIZE], conf[i:i+BATCH_SIZE], offset[i:i+BATCH_SIZE], coldensity[i:i+BATCH_SIZE] = \
-                    sess.run([t('prediction'), t('output_classifier'), t('y_nn_offset'), t('y_nn_coldensity')],
-                             feed_dict={t('x'):                 flux[i:i+BATCH_SIZE,:],
-                                        t('keep_prob'):         1.0}) #get prediction labels
+# ---- 流式批处理推理(支持多维输入) ----
+def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size, 
+                         ckpt_path, batch_size=16384):
+    """
+    对同一分桶的多条sightline进行流式批处理推理
+    支持 2D: [batch, L] 和 3D: [batch, C, L] 输入
+    """
+    t0 = timeit.default_timer()
+    g, sess, (x, keep_prob, t_pred, t_conf, t_off, t_col) = _get_model_session(
+        model_key, INPUT_SIZE, matrix_size, ckpt_path
+    )
 
-    #print("Localize Model processed {:d} samples in chunks of {:d} in {:0.1f} seconds".format(
-    #      n_samples, BATCH_SIZE, timeit.default_timer() - timer))
-
-    return pred, conf, offset, coldensity #return four labels
-
-def pred_sightline(sightline):#sightline#pred_sightlines,savefile
-    #sightline=np.load(pred_sightlines,allow_pickle = True,encoding='latin1').ravel()
+    L = INPUT_SIZE
+    C = matrix_size  # 通道数: low=4, mid/high=1
     
-    #parameters
-    matrix_size={'high':1,'mid':1,'low':4}
-    INPUT_SIZE={'high':400,'mid':400,'low':600}
-
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'}
-    hyperparameters = {}
-    if sightline != []:
-        flux,lam=make_dataset(sightline)
-        if sightline.s2n<3:
-            model='low'
-            for k in range(0,len(parameter_names)):
-                hyperparameters[parameter_names[k]] = parameters[k][0]
-        else:#s2n>3 use mid model
-            model='mid'
-            for k in range(0,len(parameter_names)):
-                hyperparameters[parameter_names[k]] = parameters[k][0]
-        (pred, conf, offset, coldensity)=predictions_ann(hyperparameters, INPUT_SIZE[model],matrix_size[model],flux,checkpoint_filename[model], TF_DEVICE='')#/gpu:1
-        dataset={'pred':pred,'conf':conf,'offset': offset, 'coldensity':coldensity, 'lam':lam }
-        return dataset
-
-def execute_single_task(task_id, data_entries, savefile, cpu_count):
-    with multiprocessing.Pool(cpu_count) as pool:
-        results=pool.map(pred_sightline, data_entries)
-        pool.close()
-        pool.join() 
-        np.save(savefile,results)
-
-
-def predictions_desi(pred_sightlines,savefile):
-
-    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
-    tf.get_logger().setLevel(logging.WARNING)
-    exception_counter = 0
-    iteration_num = 0
-
-    total_cpu_count=256
-    num_tasks=len(pred_sightlines)
-    cpu_per_task = total_cpu_count // num_tasks
-    processes = []
-    
-    if type(pred_sightlines)==str:
-        r=np.load(pred_sightlines,allow_pickle = True,encoding='latin1')
-        results=pred_sightline(tqdm(r.ravel()))
-        np.save(savefile,results)
+    # 根据matrix_size决定缓冲区形状
+    if C > 1:
+        buf = np.empty((batch_size, C, L), dtype=np.float32)  # 3D: [batch, 4, 600]
     else:
-        for task_id in range(num_tasks):
-            r=np.load(pred_sightlines[task_id],allow_pickle = True,encoding='latin1')
-            p = multiprocessing.Process(target=execute_single_task, args=(task_id, tqdm(r.ravel()), savefile[task_id], cpu_per_task))
-            processes.append(p)
-            p.start()  
-        for p in processes:
-            p.join()
+        buf = np.empty((batch_size, L), dtype=np.float32)     # 2D: [batch, 400]
     
-    
-    
-   
+    results = {i: None for i in index_list}
+    tmp_pred = {i: [] for i in index_list}
+    tmp_conf = {i: [] for i in index_list}
+    tmp_off  = {i: [] for i in index_list}
+    tmp_col  = {i: [] for i in index_list}
+    tmp_lam  = {i: None for i in index_list}
 
+    print(f"[STREAM] Start {model_key.upper()} batch inference for {len(index_list)} sightlines (shape: {buf.shape})", flush=True)
     
+    with g.as_default():
+        pos = 0
+        pending = []
+        total_runs = 0
+        
+        for i in tqdm(index_list, desc=f"{model_key.upper()}", leave=False):
+            flux_i, lam_i = make_dataset(lines[i])
+            if flux_i is None or flux_i.size == 0:
+                results[i] = None
+                continue
+                
+            fi = flux_i.astype('float32', copy=False)
+            Wi = fi.shape[0]
+            tmp_lam[i] = lam_i
+
+            # 验证形状匹配
+            if C > 1:
+                assert fi.ndim == 3 and fi.shape[1:] == (C, L), \
+                    f"Expected shape [W, {C}, {L}], got {fi.shape}"
+            else:
+                assert fi.ndim == 2 and fi.shape[1] == L, \
+                    f"Expected shape [W, {L}], got {fi.shape}"
+
+            start = 0
+            while start < Wi:
+                need = min(batch_size - pos, Wi - start)
+                
+                # 复制数据到缓冲区(处理多维情况)
+                if C > 1:
+                    buf[pos:pos+need, :, :] = fi[start:start+need, :, :]
+                else:
+                    buf[pos:pos+need, :] = fi[start:start+need, :]
+                
+                pending.append((i, pos, pos+need))
+                pos += need
+                start += need
+
+                # 批满则运行
+                if pos == batch_size:
+                    p, c, o, d = sess.run(
+                        [t_pred, t_conf, t_off, t_col],
+                        feed_dict={x: buf, keep_prob: 1.0}
+                    )
+                    for (idx, s, e) in pending:
+                        tmp_pred[idx].append(p[s:e])
+                        tmp_conf[idx].append(c[s:e])
+                        tmp_off[idx].append(o[s:e])
+                        tmp_col[idx].append(d[s:e])
+                    pos = 0
+                    pending.clear()
+                    total_runs += 1
+
+        # 处理最后一批
+        if pos > 0 and pending:
+            # 只取实际填充的部分
+            actual_buf = buf[:pos, ...] if C > 1 else buf[:pos, :]
+            
+            p, c, o, d = sess.run(
+                [t_pred, t_conf, t_off, t_col],
+                feed_dict={x: actual_buf, keep_prob: 1.0}
+            )
+            for (idx, s, e) in pending:
+                tmp_pred[idx].append(p[s:e])
+                tmp_conf[idx].append(c[s:e])
+                tmp_off[idx].append(o[s:e])
+                tmp_col[idx].append(d[s:e])
+            total_runs += 1
+
+        # 合并结果
+        for i in index_list:
+            if results[i] is None:
+                continue
+            pred = np.concatenate(tmp_pred[i], axis=0)
+            conf = np.concatenate(tmp_conf[i], axis=0)
+            off  = np.concatenate(tmp_off[i],  axis=0)
+            col  = np.concatenate(tmp_col[i],  axis=0)
+            results[i] = {
+                'pred': pred, 'conf': conf, 
+                'offset': off, 'coldensity': col, 
+                'lam': tmp_lam[i]
+            }
+
+    print(f"[STREAM] {model_key.upper()} done in {timeit.default_timer()-t0:.2f}s ({total_runs} GPU runs)", flush=True)
+    return results
+
+# ---- 单文件快速推理 ----
+def pred_file_fast(npy_path, savefile):
+    t0 = timeit.default_timer()
+    print(f"[FAST] Processing: {npy_path}", flush=True)
+    
+    arr = np.load(npy_path, allow_pickle=True, encoding='latin1')
+    lines = arr.ravel()
+    print(f"[FAST] Loaded {len(lines)} sightlines", flush=True)
+
+    idx_low, idx_mid = [], []
+    for i, sight in enumerate(lines):
+        if sight == []:
+            continue
+        (idx_low if getattr(sight, 's2n', 0) < 3 else idx_mid).append(i)
+    
+    print(f"[FAST] Groups: low={len(idx_low)}, mid={len(idx_mid)}", flush=True)
+
+    # 流式批处理
+    out_map = {}
+    if idx_low:
+        out_map.update(_infer_bucket_stream(
+            lines, idx_low, 'low',
+            INPUT_SIZE['low'], MATRIX_SIZE['low'], CKPT['low'],
+            batch_size=16384
+        ))
+    if idx_mid:
+        out_map.update(_infer_bucket_stream(
+            lines, idx_mid, 'mid',
+            INPUT_SIZE['mid'], MATRIX_SIZE['mid'], CKPT['mid'],
+            batch_size=16384
+        ))
+
+    # 还原顺序
+    results = [out_map.get(i, None) for i in range(len(lines))]
+    
+    # 确保目录存在
+    os.makedirs(os.path.dirname(savefile), exist_ok=True)
+    np.save(savefile, results)
+    
+    print(f"[FAST] Saved to {savefile} in {timeit.default_timer()-t0:.2f}s", flush=True)
+
+# ---- 顶层调度 ----
+def predictions_desi(pred_sightlines, savefile):
+    tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    tf.get_logger().setLevel(logging.ERROR)
+
+    if isinstance(pred_sightlines, str):
+        pred_file_fast(pred_sightlines, savefile)
+        return
+
+    assert len(pred_sightlines) == len(savefile), "路径列表长度不一致"
+    for in_path, out_path in zip(pred_sightlines, savefile):
+        pred_file_fast(in_path, out_path)
