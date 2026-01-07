@@ -12,6 +12,81 @@ Main entrypoint:
 Submit template:
 - `submit_desi_DLAfinder_run.sh`
 
+## How To Set Up A Run (Checklist)
+
+Before running, decide the following:
+
+1) Dataset type: `mock` or `data`
+2) Release name: a short label used in file lists and output paths (e.g. `y3_saclay`, `loa`)
+3) Spectra root: where the input FITS live
+4) Sightline root: where sightlines will be written
+5) Cache root: where the file list cache will be written
+6) Scratch output (optional): where predictions/catalogs are written
+
+You should create (or confirm) these directories exist:
+- `--sightline-root`
+- `--list-cache-root`
+- `--scratch-out` (if used)
+
+## Path Conventions By Data Type
+
+Mock (default layout: `k/j`):
+- spectra: `<spectra-root>/<k>/<j>/spectra-16-<j>.fits`
+- zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
+- truth: `<spectra-root>/<k>/<j>/truth-16-<j>.fits` (optional)
+- sightlines: `<sightline-root>/<k>/<j>/sightlines-<j>.npy`
+- pred: `<scratch-out or sightline-root>/<k>/<j>/sightlines-pred_gpu-<j>.npy`
+- dlacat: `<scratch-out or sightline-root>/<k>/<j>/dlacat_gpu-<j>.fits`
+
+Data (default layout: `k`):
+- spectra: `<spectra-root>/<k>/<j>/spectra-main-dark-<j>.fits.gz`
+- zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
+- sightlines: `<sightline-root>/<k>/<j>-pre-sightlines.npy`
+- pred: `<scratch-out or sightline-root>/<k>/<j>-pre-sightlines-pred.npy`
+- dlacat: `<scratch-out or sightline-root>/<k>/<j>-dlacat.fits`
+
+If your filenames differ, override with the `--*-pattern` flags.
+
+## Command Lines (Fill In Your Paths)
+
+### Mock run (example: y3_saclay)
+
+```bash
+python3 desi_DLAfinder_run.py \
+  --data-type mock \
+  --release y3_saclay \
+  --spectra-root /global/cfs/projectdirs/desi/mocks/lya_forest/.../spectra-16 \
+  --sightline-root /global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay/sightlines \
+  --list-cache-root /global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data \
+  --scratch-out /pscratch/sd/t/tanting/DLAfinder_out/y3_saclay \
+  --generate-sightlines \
+  --batch-size 256 --max-windows 8192
+```
+
+Required folders to create:
+- `/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay/sightlines`
+- `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
+- `/pscratch/sd/t/tanting/DLAfinder_out/y3_saclay` (optional)
+
+### Data run (example: kibo main dark, loa v0)
+
+```bash
+python3 desi_DLAfinder_run.py \
+  --data-type data \
+  --release loa --survey main --program dark --version v0 \
+  --spectra-root /global/cfs/cdirs/desi/spectro/redux/kibo/healpix/main/dark \
+  --sightline-root /global/cfs/cdirs/desi/users/tingtan/DLA_finder/data/loa/sightlines_main_dark_v0 \
+  --list-cache-root /global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data \
+  --scratch-out /pscratch/sd/t/tanting/DLAfinder_out/loa \
+  --generate-sightlines \
+  --batch-size 256 --max-windows 8192
+```
+
+Required folders to create:
+- `/global/cfs/cdirs/desi/users/tingtan/DLA_finder/data/loa/sightlines_main_dark_v0`
+- `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
+- `/pscratch/sd/t/tanting/DLAfinder_out/loa` (optional)
+
 ## Quick Start (Mock)
 
 ```bash
