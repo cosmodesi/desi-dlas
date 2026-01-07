@@ -87,33 +87,18 @@ Required folders to create:
 - `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
 - `/pscratch/sd/t/tanting/DLAfinder_out/loa` (optional)
 
-## Quick Start (Mock)
+## Quick Start (Generic Template)
 
 ```bash
 python3 desi_DLAfinder_run.py \
-  --data-type mock \
-  --spectra-root /path/to/mock/spectra-16 \
-  --sightline-root /global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay/sightlines \
-  --list-cache-root /global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data \
-  --release y3_saclay \
+  --data-type <mock|data> \
+  --spectra-root /path/to/spectra/root \
+  --sightline-root /path/to/sightlines/root \
+  --list-cache-root /path/to/list/cache \
+  --release <release> --survey <survey> --program <program> --version <version> \
   --value 0 --length 10 \
   --batch-size 256 --max-windows 8192 \
-  --scratch-out /pscratch/sd/t/tanting/DLAfinder_out/y3_saclay \
-  --generate-sightlines
-```
-
-## Quick Start (Data)
-
-```bash
-python3 desi_DLAfinder_run.py \
-  --data-type data \
-  --spectra-root /global/cfs/cdirs/desi/spectro/redux/kibo/healpix/main/dark \
-  --sightline-root /global/cfs/cdirs/desi/users/tingtan/DLA_finder/data/loa/sightlines_main_dark_v0 \
-  --list-cache-root /global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data \
-  --release loa --survey main --program dark --version v0 \
-  --value 0 --length 10 \
-  --batch-size 256 --max-windows 8192 \
-  --scratch-out /pscratch/sd/t/tanting/DLAfinder_out/loa \
+  --scratch-out /path/to/scratch/output \
   --generate-sightlines
 ```
 
