@@ -51,10 +51,10 @@ def parse_args(options=None):
     parser.add_argument("--dlacat-pattern", type=str, default="",
                         help="DLA catalog filename pattern (use {id}).")
 
-    parser.add_argument("--value", type=int, default=0, required=True,
+    parser.add_argument("--value", type=int, default=0,
                         help="Start index in the file list.")
-    parser.add_argument("--length", type=int, default=10, required=True,
-                        help="Number of files to process.")
+    parser.add_argument("--length", type=int, default=None,
+                        help="Number of files to process (default: run to end).")
 
     parser.add_argument("--batch-size", type=int, default=128,
                         help="Sightlines per batch (GPU).")
@@ -69,6 +69,12 @@ def parse_args(options=None):
                         help="Regenerate sightlines even if they exist.")
     parser.add_argument("--cpu-only", action="store_true",
                         help="Disable GPU for prediction.")
+    parser.add_argument("--stack-dlacat", action="store_true",
+                        help="Stack per-file DLA catalogs into one FITS.")
+    parser.add_argument("--stack-output", type=str, default=None,
+                        help="Output FITS path for stacked catalog.")
+    parser.add_argument("--stack-scope", choices=["range", "all"], default="all",
+                        help="Stack catalogs from current range or all cached files.")
 
     if options is None:
         return parser.parse_args()
@@ -207,6 +213,24 @@ def _ensure_parent_dirs(paths):
         os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
+def _stack_dla_catalogs(dlacat_paths, output_path):
+    from astropy.table import Table, vstack
+
+    existing = [p for p in dlacat_paths if p and os.path.exists(p)]
+    if not existing:
+        print("No DLA catalog files found for stacking.")
+        return
+
+    print(f"Stacking {len(existing)} catalogs into {output_path}")
+    base_table = Table.read(existing[0], format="fits")
+    for path in existing[1:]:
+        append_table = Table.read(path, format="fits")
+        base_table = vstack([base_table, append_table])
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    base_table.write(output_path, format="fits", overwrite=True)
+
+
 def main():
     args = parse_args()
 
@@ -241,7 +265,10 @@ def main():
     print(f"File list size: {len(lists['sightline'])} (loaded in {list_elapsed:.2f}s)")
 
     start = args.value
-    end = min(start + args.length, len(lists["sightline"]))
+    if args.length is None:
+        end = len(lists["sightline"])
+    else:
+        end = min(start + args.length, len(lists["sightline"]))
     if start >= end:
         print(f"No work for range {start}:{end}.")
         return
@@ -303,6 +330,15 @@ def main():
     cat_start = time.time()
     save_pred_all(sightline_sel, pred_sel, dlacat_sel)
     print(f"Catalog generation completed in {time.time() - cat_start:.2f}s")
+
+    if args.stack_dlacat:
+        if args.stack_output:
+            stack_out = args.stack_output
+        else:
+            base_root = args.scratch_out or args.sightline_root
+            stack_out = os.path.join(base_root, "dlacat.fits")
+        stack_list = dlacat_sel if args.stack_scope == "range" else lists["dlacat"]
+        _stack_dla_catalogs(stack_list, stack_out)
 
 
 if __name__ == "__main__":

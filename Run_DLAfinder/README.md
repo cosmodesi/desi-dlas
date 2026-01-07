@@ -47,6 +47,7 @@ python3 desi_DLAfinder_run.py \
 1) Build or load a cached file list
    - Uses `--spectra-root` to discover input FITS files.
    - Stores a cached list in `--list-cache-root` as `filelist_<tag>.npz`.
+   - This cache avoids rescanning tens of thousands of directories on every run.
 2) Generate sightlines (optional)
    - Enabled by `--generate-sightlines`.
    - Skips existing sightlines unless `--force-sightlines` is set.
@@ -90,14 +91,18 @@ You can override any pattern:
 - `--data-type` `mock|data`
 - `--spectra-root` root directory of input spectra
 - `--sightline-root` root directory for generated sightlines
-- `--list-cache-root` directory for cached lists
+- `--list-cache-root` directory for cached lists (required; keeps run startup fast)
 - `--release`, `--survey`, `--program`, `--version` (for list cache tag)
-- `--value`, `--length` range over the cached list
+- `--value` start index (default 0)
+- `--length` number of files (default: run to end)
 - `--batch-size`, `--max-windows` (GPU batch tuning)
 - `--scratch-out` alternate output root for predictions and catalogs
 - `--generate-sightlines` generate sightlines if missing
 - `--force-sightlines` always regenerate sightlines
 - `--cpu-only` disable GPU
+- `--stack-dlacat` stack per-file catalogs into one FITS
+- `--stack-output` output path for stacked catalog (default: `dlacat.fits`)
+- `--stack-scope` `range|all` (stack current range or all cached files)
 
 ## Cached File List
 
@@ -121,4 +126,3 @@ See `submit_desi_DLAfinder_run.sh` for a template that:
 - If you see out-of-memory, reduce `--max-windows` first.
 - For performance tests, you can skip catalog generation by commenting out
   `save_pred_all` in the runner.
-
