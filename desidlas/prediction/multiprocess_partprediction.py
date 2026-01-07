@@ -177,15 +177,16 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
 
         # 合并结果
         for i in index_list:
-            if results[i] is None:
+            if not tmp_pred[i]:
+                results[i] = None
                 continue
             pred = np.concatenate(tmp_pred[i], axis=0)
             conf = np.concatenate(tmp_conf[i], axis=0)
             off  = np.concatenate(tmp_off[i],  axis=0)
             col  = np.concatenate(tmp_col[i],  axis=0)
             results[i] = {
-                'pred': pred, 'conf': conf, 
-                'offset': off, 'coldensity': col, 
+                'pred': pred, 'conf': conf,
+                'offset': off, 'coldensity': col,
                 'lam': tmp_lam[i]
             }
 
