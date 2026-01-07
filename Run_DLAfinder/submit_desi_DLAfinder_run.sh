@@ -21,7 +21,8 @@ export MKL_NUM_THREADS=4
 export TF_CPP_MIN_LOG_LEVEL=2
 ulimit -n 65535
 
-export RUNNER=/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/GPU_HS/desi_DLAfinder_run.py
+export REPO_ROOT=/path/to/desi-dlas
+export RUNNER=$REPO_ROOT/Run_DLAfinder/desi_DLAfinder_run.py
 export SCR_OUT=$SCRATCH/DLAfinder_out/y3_saclay
 
 # ---- Configure dataset ----
@@ -60,7 +61,7 @@ srun --ntasks=${GPU_PER_NODE} --gpus-per-task=1 --cpus-per-task=4 \
   fi
   len=$(( end - start ))
 
-  echo "[GPU $SLURM_LOCALID] 跑索引区间: [$start, $end) 共 $len"
+  echo "[GPU $SLURM_LOCALID] range: [$start, $end) count=$len"
 
   python3 '"$RUNNER"' \
     --data-type '"$DATA_TYPE"' \

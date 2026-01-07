@@ -10,7 +10,7 @@ Main entrypoint:
 - `desi_DLAfinder_run.py`
 
 Submit template:
-- `submit_desi_DLAfinder_run.sh`
+- `submit_desi_DLAfinder_run.sh` (set `REPO_ROOT` to your local `desi-dlas` path)
 
 ## How To Set Up A Run (Checklist)
 
