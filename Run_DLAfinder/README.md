@@ -68,7 +68,7 @@ Required folders to create:
 - `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
 - `/pscratch/sd/t/tanting/DLAfinder_out/y3_saclay` (optional)
 
-### Data run (example: kibo main dark, loa v0)
+### Data run (example: LOA, kibo main dark, v0)
 
 ```bash
 python3 desi_DLAfinder_run.py \
