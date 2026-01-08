@@ -87,7 +87,7 @@ def _default_patterns(data_type: str):
             "output_layout": "k/j",
             "spectra_pattern": "spectra-16-{id}.fits",
             "zbest_pattern": "zbest-16-{id}.fits",
-            "truth_pattern": "truth-16-{id}.fits",
+            "truth_pattern": "",
             "sightline_pattern": "sightlines-{id}.npy",
             "pred_pattern": "sightlines-pred_gpu-{id}.npy",
             "dlacat_pattern": "dlacat_gpu-{id}.fits",
@@ -297,8 +297,8 @@ def main():
             if os.path.exists(sightline_path) and not args.force_sightlines:
                 continue
             os.makedirs(os.path.dirname(sightline_path), exist_ok=True)
-            truth_arg = truth_path if truth_path else []
-            zbest_arg = zbest_path if zbest_path else []
+            truth_arg = truth_path if truth_path and os.path.exists(truth_path) else []
+            zbest_arg = zbest_path if zbest_path and os.path.exists(zbest_path) else []
             try:
                 get_sightlines(spectra_path, truth_arg, zbest_arg, sightline_path)
             except Exception as exc:
