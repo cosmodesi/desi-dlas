@@ -102,6 +102,15 @@ python3 desi_DLAfinder_run.py \
   --generate-sightlines
 ```
 
+## Environment Setup (Perlmutter)
+
+```bash
+module load python
+conda create -y -p /path/to/conda_envs/CNN_GPU python=3.10
+source activate /path/to/conda_envs/CNN_GPU
+pip install 'tensorflow[and-cuda]==2.15.*'
+```
+
 ## What The Runner Does
 
 1) Build or load a cached file list
