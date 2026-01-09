@@ -1,44 +1,53 @@
 # Unified DESI DLA Finder Runner
 
-This folder provides a unified runner that supports both mock and observational data.
-It handles:
-1) sightline generation (from spectra FITS),
-2) prediction (GPU by default), and
-3) DLA catalog generation.
+Single entrypoint for both mock and observational data. It handles:
+- sightline generation (from spectra FITS)
+- prediction (GPU by default)
+- DLA catalog generation
+- optional stacking of per-file catalogs
 
 Main entrypoint:
-- `desi_DLAfinder_run.py`
+- `Run_DLAfinder/desi_DLAfinder_run.py`
 
 Submit template:
-- `submit_desi_DLAfinder_run.sh` (set `REPO_ROOT` to your local `desi-dlas` path)
+- `Run_DLAfinder/submit_desi_DLAfinder_run.sh` (set `REPO_ROOT` to your local `desi-dlas` path)
 
-## How To Set Up A Run (Checklist)
+## Environment Setup (Perlmutter)
 
-Before running, decide the following:
+Create a GPU environment (choose your own path):
 
-1) Dataset type: `mock` or `data`
-2) Release name: a short label used in file lists and output paths (e.g. `y3_saclay`, `loa`)
-3) Spectra root: where the input FITS live
-4) Sightline root: where sightlines will be written
-5) Cache root: where the file list cache will be written
-6) Scratch output (optional): where predictions/catalogs are written
+```bash
+module load python
+conda create -y -p /path/to/conda_envs/CNN_GPU python=3.10
+source activate /path/to/conda_envs/CNN_GPU
+pip install 'tensorflow[and-cuda]==2.15.*'
+```
 
-You should create (or confirm) these directories exist:
+## Decide Your Run Settings
+
+You need these choices for any run:
+- data type: `mock` or `data`
+- release label (used in cache tag and output naming)
+- spectra root (where input FITS live)
+- sightline root (where sightlines are written)
+- list cache root (where the file list cache is stored)
+- scratch output (optional; where predictions and catalogs are written)
+
+Create (or confirm) these directories exist:
 - `--sightline-root`
 - `--list-cache-root`
 - `--scratch-out` (if used)
 
-## Path Conventions By Data Type
+## Path Conventions
 
-Mock (default layout: `k/j`):
+Mock (layout `k/j`):
 - spectra: `<spectra-root>/<k>/<j>/spectra-16-<j>.fits`
 - zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
-- truth: `<spectra-root>/<k>/<j>/truth-16-<j>.fits` (optional)
 - sightlines: `<sightline-root>/<k>/<j>/sightlines-<j>.npy`
 - pred: `<scratch-out or sightline-root>/<k>/<j>/sightlines-pred_gpu-<j>.npy`
 - dlacat: `<scratch-out or sightline-root>/<k>/<j>/dlacat_gpu-<j>.fits`
 
-Data (default layout: `k`):
+Data (layout `k`):
 - spectra: `<spectra-root>/<k>/<j>/spectra-main-dark-<j>.fits.gz`
 - zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
 - sightlines: `<sightline-root>/<k>/<j>-pre-sightlines.npy`
@@ -47,7 +56,7 @@ Data (default layout: `k`):
 
 If your filenames differ, override with the `--*-pattern` flags.
 
-## Command Lines (Fill In Your Paths)
+## Command Line Examples
 
 ### Mock run (example: y3_saclay)
 
@@ -63,7 +72,7 @@ python3 desi_DLAfinder_run.py \
   --batch-size 256 --max-windows 8192
 ```
 
-Required folders to create:
+Required folders:
 - `/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay/sightlines`
 - `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
 - `/pscratch/sd/t/tanting/DLAfinder_out/y3_saclay` (optional)
@@ -82,12 +91,12 @@ python3 desi_DLAfinder_run.py \
   --batch-size 256 --max-windows 8192
 ```
 
-Required folders to create:
+Required folders:
 - `/global/cfs/cdirs/desi/users/tingtan/DLA_finder/data/loa/sightlines_main_dark_v0`
 - `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
 - `/pscratch/sd/t/tanting/DLAfinder_out/loa` (optional)
 
-## Quick Start (Generic Template)
+### Generic template
 
 ```bash
 python3 desi_DLAfinder_run.py \
@@ -102,67 +111,34 @@ python3 desi_DLAfinder_run.py \
   --generate-sightlines
 ```
 
-## Environment Setup (Perlmutter)
-
-```bash
-module load python
-conda create -y -p /path/to/conda_envs/CNN_GPU python=3.10
-source activate /path/to/conda_envs/CNN_GPU
-pip install 'tensorflow[and-cuda]==2.15.*'
-```
-
 ## What The Runner Does
 
-1) Build or load a cached file list
-   - Uses `--spectra-root` to discover input FITS files.
-   - Stores a cached list in `--list-cache-root` as `filelist_<tag>.npz`.
-   - This cache avoids rescanning tens of thousands of directories on every run.
-   - If you change filename patterns or data type, run once with `--rebuild-list`.
-2) Generate sightlines (optional)
-   - Enabled by `--generate-sightlines`.
-   - Skips existing sightlines unless `--force-sightlines` is set.
-3) Predict + catalog
-   - GPU by default; use `--cpu-only` for CPU.
-   - Writes prediction `.npy` and DLA catalog `.fits`.
+1) Builds or loads a cached file list (`filelist_<tag>.npz`).
+2) Generates sightlines if `--generate-sightlines` is set.
+3) Runs prediction and writes per-file catalogs.
+4) Optionally stacks per-file catalogs into one FITS.
 
-## File Layout Defaults
+If you change data type or filename patterns, run once with `--rebuild-list`.
 
-The runner uses default filename patterns per data type; override with flags if needed.
+## Stacking Catalogs
 
-### Mock defaults
-- Spectra: `spectra-16-{id}.fits`
-- ZBEST: `zbest-16-{id}.fits`
-- Truth: `truth-16-{id}.fits`
-- Sightlines: `sightlines-{id}.npy`
-- Pred: `sightlines-pred_gpu-{id}.npy`
-- DLA catalog: `dlacat_gpu-{id}.fits`
-- Output layout: `k/j` (two-level directory under `--sightline-root`)
+Enable stacking at the end of a run:
 
-### Data defaults
-- Spectra: `spectra-main-dark-{id}.fits.gz`
-- ZBEST: `zbest-16-{id}.fits`
-- Truth: (empty)
-- Sightlines: `{id}-pre-sightlines.npy`
-- Pred: `{id}-pre-sightlines-pred.npy`
-- DLA catalog: `{id}-dlacat.fits`
-- Output layout: `k` (one-level directory under `--sightline-root`)
+```bash
+--stack-dlacat --stack-scope all
+```
 
-You can override any pattern:
-- `--spectra-pattern`
-- `--zbest-pattern`
-- `--truth-pattern`
-- `--sightline-pattern`
-- `--pred-pattern`
-- `--dlacat-pattern`
-- `--output-layout` (`k` or `k/j`)
+Defaults:
+- output path: `<scratch-out or sightline-root>/dlacat.fits`
+- scope: `all` (use `--stack-scope range` to stack only the current chunk)
 
 ## Parameters (Common)
 
 - `--data-type` `mock|data`
 - `--spectra-root` root directory of input spectra
 - `--sightline-root` root directory for generated sightlines
-- `--list-cache-root` directory for cached lists (required; keeps run startup fast)
-- `--release`, `--survey`, `--program`, `--version` (for list cache tag)
+- `--list-cache-root` directory for cached lists (required)
+- `--release`, `--survey`, `--program`, `--version` (cache tag components)
 - `--value` start index (default 0)
 - `--length` number of files (default: run to end)
 - `--batch-size`, `--max-windows` (GPU batch tuning)
@@ -171,28 +147,15 @@ You can override any pattern:
 - `--force-sightlines` always regenerate sightlines
 - `--cpu-only` disable GPU
 - `--stack-dlacat` stack per-file catalogs into one FITS
-- `--stack-output` output path for stacked catalog (default: `dlacat.fits`)
-- `--stack-scope` `range|all` (stack current range or all cached files)
-
-## Cached File List
-
-The runner stores a cached list in `--list-cache-root`:
-- `filelist_<tag>.npz`
-
-The tag is derived from `data-type`, `release`, `survey`, `program`, and `version`,
-or can be overridden by `--list-cache-tag`.
-Use `--rebuild-list` to force regeneration.
+- `--stack-output` output path for stacked catalog
+- `--stack-scope` `range|all`
 
 ## Submit Script (GPU, 4 tasks)
 
-See `submit_desi_DLAfinder_run.sh` for a template that:
-- runs 4 tasks per node (1 GPU per task),
-- splits the range across tasks, and
-- logs each task to a separate file.
+Use `submit_desi_DLAfinder_run.sh` to run 4 tasks per node (1 GPU each).
+It splits the file list across tasks and writes per-task logs.
 
 ## Tips
 
 - For A100 40GB, start with `--batch-size 256` and `--max-windows 8192`.
 - If you see out-of-memory, reduce `--max-windows` first.
-- For performance tests, you can skip catalog generation by commenting out
-  `save_pred_all` in the runner.
