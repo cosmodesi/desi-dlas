@@ -297,7 +297,10 @@ def main():
             if os.path.exists(sightline_path) and not args.force_sightlines:
                 continue
             os.makedirs(os.path.dirname(sightline_path), exist_ok=True)
-            truth_arg = truth_path if truth_path and os.path.exists(truth_path) else []
+            if args.data_type == "mock":
+                truth_arg = []
+            else:
+                truth_arg = truth_path if truth_path and os.path.exists(truth_path) else []
             zbest_arg = zbest_path if zbest_path and os.path.exists(zbest_path) else []
             try:
                 get_sightlines(spectra_path, truth_arg, zbest_arg, sightline_path)

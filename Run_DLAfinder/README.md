@@ -108,6 +108,7 @@ python3 desi_DLAfinder_run.py \
    - Uses `--spectra-root` to discover input FITS files.
    - Stores a cached list in `--list-cache-root` as `filelist_<tag>.npz`.
    - This cache avoids rescanning tens of thousands of directories on every run.
+   - If you change filename patterns or data type, run once with `--rebuild-list`.
 2) Generate sightlines (optional)
    - Enabled by `--generate-sightlines`.
    - Skips existing sightlines unless `--force-sightlines` is set.
