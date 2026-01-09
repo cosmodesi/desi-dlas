@@ -56,60 +56,44 @@ Data (layout `k`):
 
 If your filenames differ, override with the `--*-pattern` flags.
 
-## Command Line Examples
+## Quick Start (Minimal Commands)
 
-### Mock run (example: y3_saclay)
+### Mock (only three required paths)
+
+Required paths:
+- `--spectra-root`: mock spectra root
+- `--sightline-root`: output sightlines root
+- `--list-cache-root`: cache directory (keeps startup fast)
 
 ```bash
 python3 desi_DLAfinder_run.py \
   --data-type mock \
-  --release y3_saclay \
-  --spectra-root /global/cfs/projectdirs/desi/mocks/lya_forest/.../spectra-16 \
-  --sightline-root /global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay/sightlines \
-  --list-cache-root /global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data \
-  --scratch-out /pscratch/sd/t/tanting/DLAfinder_out/y3_saclay \
-  --generate-sightlines \
-  --batch-size 256 --max-windows 8192
+  --release <release_name> \
+  --spectra-root <mock_spectra_root> \
+  --sightline-root <sightline_output_root> \
+  --list-cache-root <list_cache_root> \
+  --generate-sightlines
 ```
 
-Required folders:
-- `/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay/sightlines`
-- `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
-- `/pscratch/sd/t/tanting/DLAfinder_out/y3_saclay` (optional)
+Optional:
+- `--scratch-out` to write predictions/catalogs to a separate location
+- `--batch-size` and `--max-windows` for GPU tuning
 
-### Data run (example: LOA, kibo main dark, v0)
+### Data (minimal + survey/program/version)
 
 ```bash
 python3 desi_DLAfinder_run.py \
   --data-type data \
-  --release loa --survey main --program dark --version v0 \
-  --spectra-root /global/cfs/cdirs/desi/spectro/redux/kibo/healpix/main/dark \
-  --sightline-root /global/cfs/cdirs/desi/users/tingtan/DLA_finder/data/loa/sightlines_main_dark_v0 \
-  --list-cache-root /global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data \
-  --scratch-out /pscratch/sd/t/tanting/DLAfinder_out/loa \
-  --generate-sightlines \
-  --batch-size 256 --max-windows 8192
-```
-
-Required folders:
-- `/global/cfs/cdirs/desi/users/tingtan/DLA_finder/data/loa/sightlines_main_dark_v0`
-- `/global/u1/t/tanting/DESI_analysis/DESI_CNN_DLA/data`
-- `/pscratch/sd/t/tanting/DLAfinder_out/loa` (optional)
-
-### Generic template
-
-```bash
-python3 desi_DLAfinder_run.py \
-  --data-type <mock|data> \
-  --spectra-root /path/to/spectra/root \
-  --sightline-root /path/to/sightlines/root \
-  --list-cache-root /path/to/list/cache \
-  --release <release> --survey <survey> --program <program> --version <version> \
-  --value 0 --length 10 \
-  --batch-size 256 --max-windows 8192 \
-  --scratch-out /path/to/scratch/output \
+  --release <release_name> --survey <survey> --program <program> --version <version> \
+  --spectra-root <data_spectra_root> \
+  --sightline-root <sightline_output_root> \
+  --list-cache-root <list_cache_root> \
   --generate-sightlines
 ```
+
+Optional:
+- `--scratch-out` to write predictions/catalogs to a separate location
+- `--batch-size` and `--max-windows` for GPU tuning
 
 ## What The Runner Does
 
