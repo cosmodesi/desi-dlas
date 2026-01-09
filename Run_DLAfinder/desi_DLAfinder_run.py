@@ -56,9 +56,9 @@ def parse_args(options=None):
     parser.add_argument("--length", type=int, default=None,
                         help="Number of files to process (default: run to end).")
 
-    parser.add_argument("--batch-size", type=int, default=128,
+    parser.add_argument("--batch-size", type=int, default=512,
                         help="Sightlines per batch (GPU).")
-    parser.add_argument("--max-windows", type=int, default=4096,
+    parser.add_argument("--max-windows", type=int, default=16384,
                         help="Windows per GPU batch.")
     parser.add_argument("--scratch-out", type=str, default=None,
                         help="Optional output root for prediction/catalog files.")

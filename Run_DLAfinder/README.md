@@ -77,7 +77,7 @@ python3 desi_DLAfinder_run.py \
 
 Optional:
 - `--scratch-out` to write predictions/catalogs to a separate location
-- `--batch-size` and `--max-windows` for GPU tuning
+- `--batch-size` and `--max-windows` for GPU tuning (defaults: 512 / 16384)
 
 ### Data (minimal + survey/program/version)
 
@@ -93,7 +93,7 @@ python3 desi_DLAfinder_run.py \
 
 Optional:
 - `--scratch-out` to write predictions/catalogs to a separate location
-- `--batch-size` and `--max-windows` for GPU tuning
+- `--batch-size` and `--max-windows` for GPU tuning (defaults: 512 / 16384)
 
 ## What The Runner Does
 
@@ -125,7 +125,7 @@ Defaults:
 - `--release`, `--survey`, `--program`, `--version` (cache tag components)
 - `--value` start index (default 0)
 - `--length` number of files (default: run to end)
-- `--batch-size`, `--max-windows` (GPU batch tuning)
+- `--batch-size`, `--max-windows` (GPU batch tuning; defaults: 512 / 16384)
 - `--scratch-out` alternate output root for predictions and catalogs
 - `--generate-sightlines` generate sightlines if missing
 - `--force-sightlines` always regenerate sightlines
@@ -141,5 +141,5 @@ It splits the file list across tasks and writes per-task logs.
 
 ## Tips
 
-- For A100 40GB, start with `--batch-size 256` and `--max-windows 8192`.
+- For A100 40GB, start with `--batch-size 512` and `--max-windows 16384`.
 - If you see out-of-memory, reduce `--max-windows` first.
