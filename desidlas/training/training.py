@@ -342,6 +342,13 @@ if __name__ == '__main__':
 
     
     # Write out CSV header
+    batch_dir = os.path.dirname(batch_results_file)
+    if batch_dir:
+        os.makedirs(batch_dir, exist_ok=True)
+    if checkpoint_filename:
+        ckpt_dir = os.path.dirname(checkpoint_filename)
+        if ckpt_dir:
+            os.makedirs(ckpt_dir, exist_ok=True)
     os.remove(batch_results_file) if os.path.exists(batch_results_file) else None
     with open(batch_results_file, "a") as csvoutput:
         csvoutput.write("iteration_num,normalized_score,best_accuracy,last_accuracy,last_objective,best_offset_rmse,last_offset_rmse,best_coldensity_rmse,last_coldensity_rmse," + ",".join(parameter_names) + "\n")
