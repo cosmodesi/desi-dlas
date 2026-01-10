@@ -12,6 +12,7 @@ class Dataset:
         self.filenames = glob.glob(datafiles)#datafiles
         self.sample_count = 0
         self.kernel_size = None
+        self.matrix_size = 1
         #print(self.filenames)
         assert len(self.filenames) > 0
         for ff in self.filenames:
@@ -19,10 +20,20 @@ class Dataset:
             #import pdb
             #pdb.set_trace()
             for f in r.keys():
-                n_samples = len(r[f]['labels_classifier']) 
+                flux = np.asarray(r[f]['FLUX'])
+                labels_classifier = np.asarray(r[f]['labels_classifier'])
+                n_samples = len(labels_classifier)
                 self.sample_count += n_samples
                 if self.kernel_size is None:
-                    self.kernel_size = r[f]['FLUX'].shape[1]
+                    if flux.ndim == 3:
+                        self.matrix_size = flux.shape[1]
+                        self.kernel_size = flux.shape[2]
+                    elif flux.ndim == 2:
+                        self.kernel_size = flux.shape[1]
+                    elif flux.ndim == 1:
+                        self.kernel_size = flux.shape[0]
+                    else:
+                        raise RuntimeError("Unsupported FLUX shape: %r" % (flux.shape,))
                 print("DEBUG> init dataset file loop, counting samples in [%s]: %d" % (f,n_samples))
         if self.kernel_size is None:
             raise RuntimeError("No training samples found; kernel_size could not be determined.")
@@ -95,7 +106,10 @@ class Dataset:
     # Loads a set of randomly selected samples from across all files and returns the data
     def load_dataset_slice(self):
         data = {}
-        data['fluxes'] = np.empty((self.BUFFERSIZE, self.kernel_size), dtype=np.float32)
+        if self.matrix_size > 1:
+            data['fluxes'] = np.empty((self.BUFFERSIZE, self.matrix_size, self.kernel_size), dtype=np.float32)
+        else:
+            data['fluxes'] = np.empty((self.BUFFERSIZE, self.kernel_size), dtype=np.float32)
         data['labels_classifier'] = np.empty((self.BUFFERSIZE), dtype=np.float32)
         data['labels_offset'] = np.empty((self.BUFFERSIZE), dtype=np.float32)
         data['col_density'] = np.empty((self.BUFFERSIZE), dtype=np.float32)
@@ -115,15 +129,23 @@ class Dataset:
             x = np.load(f,allow_pickle = True,encoding='latin1').item()
             for kk in x.keys():
 
-                x_len = x[kk]['labels_classifier'].shape[0]
+                fluxes = np.asarray(x[kk]['FLUX'])
+                labels_classifier = np.asarray(x[kk]['labels_classifier'])
+                labels_offset = np.asarray(x[kk]['labels_offset'])
+                col_density = np.asarray(x[kk]['col_density'])
+
+                x_len = labels_classifier.shape[0]
                 x_ixs = samples_ix[(samples_ix >= distributed_ix) & (samples_ix < distributed_ix + x_len)] - distributed_ix
                 distributed_ix += x_len
             # print "DEBUG> FILE LOOP: [%s] loaded %d samples" % (f, len(x_ixs))
 
-                data['fluxes'][buffer_count:buffer_count + len(x_ixs)] = x[kk]['FLUX'][x_ixs]
-                data['labels_classifier'][buffer_count:buffer_count + len(x_ixs)] = x[kk]['labels_classifier'][x_ixs]
-                data['labels_offset'][buffer_count:buffer_count + len(x_ixs)] = x[kk]['labels_offset'][x_ixs]
-                data['col_density'][buffer_count:buffer_count + len(x_ixs)] = x[kk]['col_density'][x_ixs]
+                if self.matrix_size > 1:
+                    data['fluxes'][buffer_count:buffer_count + len(x_ixs), :, :] = fluxes[x_ixs]
+                else:
+                    data['fluxes'][buffer_count:buffer_count + len(x_ixs)] = fluxes[x_ixs]
+                data['labels_classifier'][buffer_count:buffer_count + len(x_ixs)] = labels_classifier[x_ixs]
+                data['labels_offset'][buffer_count:buffer_count + len(x_ixs)] = labels_offset[x_ixs]
+                data['col_density'][buffer_count:buffer_count + len(x_ixs)] = col_density[x_ixs]
 
                 buffer_count += len(x_ixs)
         print ("DEBUG> File load loop complete")
