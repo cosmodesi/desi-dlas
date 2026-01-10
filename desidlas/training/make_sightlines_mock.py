@@ -34,7 +34,8 @@ def main():
 
             spectra = os.path.join(data_dir, "spectra-16-{}.fits".format(j))
             zbest = os.path.join(data_dir, "zbest-16-{}.fits".format(j))
-            truth = []
+            truth_path = os.path.join(data_dir, "truth-16-{}.fits".format(j))
+            truth = truth_path if os.path.exists(truth_path) else []
 
             get_sightlines(spectra, truth, zbest, outpath)
         print("{} done".format(k))

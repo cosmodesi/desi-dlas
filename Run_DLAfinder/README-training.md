@@ -12,6 +12,10 @@ Scripts:
 - `desidlas/training/make_sightlines_mock.py`
 - `desidlas/training/make_training_shards.py`
 
+Note:
+- Training requires truth labels. The sightline script will use `truth-16-<id>.fits`
+  if present; otherwise the sightline will have no DLA labels and shards may be empty.
+
 ## 1) Generate sightlines
 
 ```bash
