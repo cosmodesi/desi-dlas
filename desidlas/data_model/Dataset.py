@@ -11,17 +11,21 @@ class Dataset:
         #print(datafiles,glob.glob(datafiles))
         self.filenames = glob.glob(datafiles)#datafiles
         self.sample_count = 0
+        self.kernel_size = None
         #print(self.filenames)
         assert len(self.filenames) > 0
         for ff in self.filenames:
-            r= np.load(ff,allow_pickle = True,encoding='latin1').item()#vars(np.load(ff,allow_pickle = True,encoding='latin1').item())
+            r = np.load(ff, allow_pickle=True, encoding='latin1').item()
             #import pdb
             #pdb.set_trace()
             for f in r.keys():
                 n_samples = len(r[f]['labels_classifier']) 
                 self.sample_count += n_samples
-                self.kernel_size = r[f]['FLUX'].shape[1]
+                if self.kernel_size is None:
+                    self.kernel_size = r[f]['FLUX'].shape[1]
                 print("DEBUG> init dataset file loop, counting samples in [%s]: %d" % (f,n_samples))
+        if self.kernel_size is None:
+            raise RuntimeError("No training samples found; kernel_size could not be determined.")
 
         self.BUFFERSIZE = min(BUFFERSIZE, self.sample_count)
 
