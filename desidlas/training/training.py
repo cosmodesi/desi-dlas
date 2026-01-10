@@ -13,6 +13,10 @@ import os
 from pathlib import Path
 from pkg_resources import resource_filename
 
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from tensorflow.python.framework import ops
 ops.reset_default_graph()
 
