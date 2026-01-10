@@ -13,7 +13,7 @@ import itertools
 
 import numpy as np
 
-from desidlas.dla_cnn.spectra_utils import get_lam_data
+from desidlas.datasets.input_set import get_lam_data
 from desidlas.dla_cnn.defs import REST_RANGE,kernel,best_v
     
 def pad_sightline(sightline, lam, lam_rest, ix_dla_range,kernelrangepx,v=best_v['all']):
