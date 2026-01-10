@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.signal as signal
 from desidlas.datasets.datasetting import split_sightline_into_samples,select_samples_50p_pos_neg,pad_sightline
-from desidlas.datasets.preprocess import label_sightline
+from desidlas.datasets.training_set import label_sightline
 from desidlas.dla_cnn.spectra_utils import get_lam_data
 from desidlas.dla_cnn import defs
 REST_RANGE = defs.REST_RANGE
