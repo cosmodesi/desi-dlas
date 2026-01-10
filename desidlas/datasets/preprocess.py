@@ -1,5 +1,50 @@
 """ Code for pre-processing DESI data"""
 
+
+from desidlas.dla_cnn.spectra_utils import get_lam_data
+from desidlas.dla_cnn import defs
+REST_RANGE = defs.REST_RANGE
+kernel = defs.kernel
+
+
+def label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE, pos_sample_kernel_percent=0.3):
+    """
+    Add labels to input sightline based on the DLAs along that sightline
+    """
+    lam, lam_rest, ix_dla_range = get_lam_data(sightline.loglam, sightline.z_qso, REST_RANGE)
+    samplerangepx = int(kernel*pos_sample_kernel_percent/2)
+    ix_dlas=[]
+    coldensity_dlas=[]
+    for dla in sightline.dlas:
+        if (912<(dla.central_wavelength/(1+sightline.z_qso))<1220) & (dla.central_wavelength>=3700):
+            ix_dlas.append((abs(lam[ix_dla_range]-dla.central_wavelength)).argmin())
+            coldensity_dlas.append(dla.col_density)
+
+    classification = np.zeros((sum(ix_dla_range)), dtype=np.float32)
+    for ix_dla in ix_dlas:
+        classification[ix_dla-samplerangepx*2:ix_dla+samplerangepx*2+1] = -1
+        lyb_ix = sightline.get_lyb_index(ix_dla)
+        classification[lyb_ix-samplerangepx:lyb_ix+samplerangepx+1] = -1
+    for ix_dla in ix_dlas:
+        classification[ix_dla-samplerangepx:ix_dla+samplerangepx+1] = 1
+
+    offsets_array = np.full([sum(ix_dla_range)], np.nan, dtype=np.float32)
+    column_density = np.full([sum(ix_dla_range)], np.nan, dtype=np.float32)
+    for i in range(int(samplerangepx+1)):
+        for ix_dla,j in zip(ix_dlas,range(len(ix_dlas))):
+            offsets_array[ix_dla+i] = -i if np.isnan(offsets_array[ix_dla+i]) else offsets_array[ix_dla+i]
+            offsets_array[ix_dla-i] =  i if np.isnan(offsets_array[ix_dla-i]) else offsets_array[ix_dla-i]
+            column_density[ix_dla+i] = coldensity_dlas[j] if np.isnan(column_density[ix_dla+i]) else column_density[ix_dla+i]
+            column_density[ix_dla-i] = coldensity_dlas[j] if np.isnan(column_density[ix_dla-i]) else column_density[ix_dla-i]
+    offsets_array = np.nan_to_num(offsets_array)
+    column_density = np.nan_to_num(column_density)
+
+    sightline.classification = classification
+    sightline.offsets = offsets_array
+    sightline.column_density = column_density
+
+    return classification, offsets_array, column_density
+
 ''' Basic Recipe
 0. Load the DESI mock spectrum
 1. Resample to a constant dlambda/lambda dispersion
