@@ -9,7 +9,10 @@ class Dataset:
 
         self.data = None
         #print(datafiles,glob.glob(datafiles))
-        self.filenames = glob.glob(datafiles)#datafiles
+        if isinstance(datafiles, (list, tuple)):
+            self.filenames = list(datafiles)
+        else:
+            self.filenames = glob.glob(datafiles)#datafiles
         self.sample_count = 0
         self.kernel_size = None
         self.matrix_size = 1

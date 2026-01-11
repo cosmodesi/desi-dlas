@@ -277,7 +277,9 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     y_nn_coldensity = tf.reshape(y_fc4_3, [-1], name='y_nn_coldensity')
 
     # Train and Evaluate the model
-    loss_classifier = tf.add(tf.nn.sigmoid_cross_entropy_with_logits(logits=y_nn_classifier, labels=label_classifier),
+    pos_weight = hyperparameters.get('pos_weight', 1.0)
+    loss_classifier = tf.add(tf.nn.weighted_cross_entropy_with_logits(
+                                logits=y_nn_classifier, labels=label_classifier, pos_weight=pos_weight),
                              l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
                                                           tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
                              name='loss_classifier')

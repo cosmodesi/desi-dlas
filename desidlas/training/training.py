@@ -6,7 +6,7 @@
 """
 import numpy as np
 import math
-import re, os, traceback, sys, json
+import re, os, traceback, sys, json, glob
 import argparse
 import tensorflow as tf
 import os
@@ -325,6 +325,10 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--test_dataset_filename', help='File name of the testing dataset without extension', required=False, default=testdata_path)
     parser.add_argument('-t', '--INPUT_SIZE', type=int, help='set the input data size', required=False, default=400)
     parser.add_argument('-m', '--matrix_size', type=int, help='set the matrix size when using smooth', required=False, default=1)
+    parser.add_argument('--split', type=float, default=None, help='Split ratio for validation when only a train glob is provided (e.g., 0.1).')
+    parser.add_argument('--split-seed', type=int, default=42, help='Random seed for train/val split.')
+    parser.add_argument('--learning-rate', type=float, default=None, help='Override learning rate.')
+    parser.add_argument('--pos-weight', type=float, default=None, help='Positive class weight for classifier loss.')
     args = vars(parser.parse_args())
 
     RUN_SINGLE_ITERATION = not args['hyperparamsearch']
@@ -335,8 +339,20 @@ if __name__ == '__main__':
     INPUT_SIZE = args['INPUT_SIZE']
     matrix_size = args['matrix_size']
 
-    train_dataset = Dataset(args['train_dataset_filename'])
-    test_dataset = Dataset(args['test_dataset_filename'])
+    train_files = args['train_dataset_filename']
+    test_files = args['test_dataset_filename']
+    if args['split'] is not None:
+        all_files = sorted(glob.glob(train_files))
+        if not all_files:
+            raise RuntimeError("No training files matched for split.")
+        rng = np.random.default_rng(args['split_seed'])
+        rng.shuffle(all_files)
+        split_idx = int(len(all_files) * (1.0 - args['split']))
+        train_files = all_files[:split_idx]
+        test_files = all_files[split_idx:]
+
+    train_dataset = Dataset(train_files)
+    test_dataset = Dataset(test_files)
 
     exception_counter = 0
     iteration_num = 0
@@ -361,6 +377,14 @@ if __name__ == '__main__':
     #choose the hyperparameters
     for k in range(0,len(parameter_names)):
         hyperparameters[parameter_names[k]] = parameters[k][0]
+    if args['learning_rate'] is not None:
+        hyperparameters['learning_rate'] = args['learning_rate']
+    elif matrix_size == 4:
+        hyperparameters['learning_rate'] = min(hyperparameters['learning_rate'], 2e-5)
+    if args['pos_weight'] is not None:
+        hyperparameters['pos_weight'] = args['pos_weight']
+    elif matrix_size == 4:
+        hyperparameters['pos_weight'] = 3.0
 
     #start the training
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,
