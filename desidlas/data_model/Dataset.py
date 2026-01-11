@@ -15,10 +15,19 @@ class Dataset:
         self.matrix_size = 1
         #print(self.filenames)
         assert len(self.filenames) > 0
+        good_files = []
         for ff in self.filenames:
-            r = np.load(ff, allow_pickle=True, encoding='latin1').item()
+            try:
+                r = np.load(ff, allow_pickle=True, encoding='latin1').item()
+            except Exception as exc:
+                print("WARNING> skipping unreadable shard %s (%s)" % (ff, exc))
+                continue
             #import pdb
             #pdb.set_trace()
+            if not r:
+                print("WARNING> skipping empty shard %s" % ff)
+                continue
+            good_files.append(ff)
             for f in r.keys():
                 flux = np.asarray(r[f]['FLUX'])
                 labels_classifier = np.asarray(r[f]['labels_classifier'])
@@ -35,6 +44,7 @@ class Dataset:
                     else:
                         raise RuntimeError("Unsupported FLUX shape: %r" % (flux.shape,))
                 print("DEBUG> init dataset file loop, counting samples in [%s]: %d" % (f,n_samples))
+        self.filenames = good_files
         if self.kernel_size is None:
             raise RuntimeError("No training samples found; kernel_size could not be determined.")
 
