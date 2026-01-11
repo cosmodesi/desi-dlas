@@ -188,7 +188,7 @@ def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE, matrix_s
         with tf.device('/gpu:1'), tf.compat.v1.Session(config=config) as sess:
             # Restore or initialize model
             if load_filename is not None:
-                tf.train.Saver().restore(sess, load_filename+".ckpt")
+                tf.compat.v1.train.Saver().restore(sess, load_filename + ".ckpt")
                 
             else:
                
