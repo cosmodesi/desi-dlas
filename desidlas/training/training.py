@@ -187,9 +187,11 @@ def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE, matrix_s
 
         with tf.device('/gpu:1'), tf.compat.v1.Session(config=config) as sess:
             # Restore or initialize model
+            start_iter = 0
             if load_filename is not None:
                 tf.compat.v1.train.Saver().restore(sess, load_filename + ".ckpt")
-                
+                start_iter = int(sess.run(t('global_step')))
+                print("Resuming from step %d" % start_iter)
             else:
                
                 sess.run(tf.compat.v1.global_variables_initializer())
@@ -197,7 +199,7 @@ def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE, matrix_s
             
             summary_writer = tf.summary.create_file_writer(tblogs)
 
-            for i in range(training_iters):
+            for i in range(start_iter, start_iter + training_iters):
                 # Grab a batch
                 batch_fluxes, batch_labels_classifier, batch_labels_offset, batch_col_density = train_dataset.next_batch(batch_size)
                 # Train
