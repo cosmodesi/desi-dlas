@@ -281,17 +281,20 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
                              l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
                                                           tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
                              name='loss_classifier')
-    loss_offset_regression = tf.add(tf.reduce_sum(input_tensor=tf.nn.l2_loss(y_nn_offset - label_offset)),
+    pos_mask = tf.cast(tf.equal(label_classifier, 1.0), tf.float32)
+    pos_count = tf.reduce_sum(input_tensor=pos_mask) + 1e-6
+    offset_residual = tf.square(y_nn_offset - label_offset)
+    loss_offset_regression = tf.add(tf.reduce_sum(input_tensor=offset_residual * pos_mask) / pos_count,
                                     l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
                                                                  tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_2)),
                                     name='loss_offset_regression')
     epsilon = 1e-6 # the small value safe from 32-bit floating point rounding error, this is used in column density loss fucntion
+    coldensity_residual = tf.square(y_nn_coldensity - label_coldensity)
+    coldensity_weight = tf.compat.v1.math.divide(label_coldensity, label_coldensity + epsilon)
     loss_coldensity_regression = tf.reduce_sum(
-        input_tensor=tf.multiply(tf.square(y_nn_coldensity - label_coldensity),
-                    tf.compat.v1.math.divide(label_coldensity,label_coldensity+epsilon)) +
+        input_tensor=tf.multiply(coldensity_residual, coldensity_weight) * pos_mask) / pos_count + \
         l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
-                                     tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
-        name='loss_coldensity_regression')
+                                     tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1))
 
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
     
@@ -310,8 +313,8 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     correct_prediction = tf.equal(prediction, label_classifier)
     # get the mean value of the prediction tensor as the accuracy
     accuracy = tf.reduce_mean(input_tensor=tf.cast(correct_prediction, tf.float32), name='accuracy')
-    rmse_offset = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(tf.subtract(y_nn_offset,label_offset))), name='rmse_offset')
-    rmse_coldensity = tf.sqrt(tf.reduce_mean(input_tensor=tf.square(tf.subtract(y_nn_coldensity,label_coldensity))), name='rmse_coldensity')
+    rmse_offset = tf.sqrt(tf.reduce_sum(input_tensor=offset_residual * pos_mask) / pos_count, name='rmse_offset')
+    rmse_coldensity = tf.sqrt(tf.reduce_sum(input_tensor=coldensity_residual * pos_mask) / pos_count, name='rmse_coldensity')
     
     # add the element and their value into a summary list
     # They can be used later when the model is called
@@ -324,4 +327,3 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     # tb_summaries = tf.merge_all_summaries()
 
     return train_step_ABC, tfo
-
