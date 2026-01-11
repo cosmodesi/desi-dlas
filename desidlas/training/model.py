@@ -295,6 +295,7 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
         input_tensor=tf.multiply(coldensity_residual, coldensity_weight) * pos_mask) / pos_count + \
         l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
                                      tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1))
+    loss_coldensity_regression = tf.identity(loss_coldensity_regression, name='loss_coldensity_regression')
 
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
     
