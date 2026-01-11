@@ -329,6 +329,7 @@ if __name__ == '__main__':
     parser.add_argument('--split-seed', type=int, default=42, help='Random seed for train/val split.')
     parser.add_argument('--learning-rate', type=float, default=None, help='Override learning rate.')
     parser.add_argument('--pos-weight', type=float, default=None, help='Positive class weight for classifier loss.')
+    parser.add_argument('--shard-sample', type=int, default=None, help='Number of shard files to sample per buffer load.')
     args = vars(parser.parse_args())
 
     RUN_SINGLE_ITERATION = not args['hyperparamsearch']
@@ -351,8 +352,8 @@ if __name__ == '__main__':
         train_files = all_files[:split_idx]
         test_files = all_files[split_idx:]
 
-    train_dataset = Dataset(train_files)
-    test_dataset = Dataset(test_files)
+    train_dataset = Dataset(train_files, shard_sample=args['shard_sample'])
+    test_dataset = Dataset(test_files, shard_sample=args['shard_sample'])
 
     exception_counter = 0
     iteration_num = 0

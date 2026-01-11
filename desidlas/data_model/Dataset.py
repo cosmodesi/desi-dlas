@@ -3,9 +3,10 @@ import glob, sys, gzip, pickle, os, multiprocessing.dummy
 
 class Dataset:
 
-    def __init__(self, datafiles, BUFFERSIZE=3000000):
+    def __init__(self, datafiles, BUFFERSIZE=3000000, shard_sample=None, seed=None):
         self.p = multiprocessing.dummy.Pool(1)
         self.future = None
+        self.rng = np.random.default_rng(seed)
 
         self.data = None
         #print(datafiles,glob.glob(datafiles))
@@ -16,6 +17,7 @@ class Dataset:
         self.sample_count = 0
         self.kernel_size = None
         self.matrix_size = 1
+        self.shard_sample = shard_sample
         #print(self.filenames)
         assert len(self.filenames) > 0
         good_files = []
@@ -127,40 +129,75 @@ class Dataset:
         data['labels_offset'] = np.empty((self.BUFFERSIZE), dtype=np.float32)
         data['col_density'] = np.empty((self.BUFFERSIZE), dtype=np.float32)
 
-        samples_ix = self.ix_permutation[0:self.BUFFERSIZE]
-        self.samples_consumed += self.BUFFERSIZE
-        if self.samples_consumed >= self.sample_count:                     # Reshuffle or roll
-            self.samples_consumed = 0  # Num of samples consumed so far.
-            self.ix_permutation = np.random.permutation(self.sample_count)
-        else:
-            self.ix_permutation = np.roll(self.ix_permutation, self.BUFFERSIZE*-1)
-
-        distributed_ix = 0          # Counts samples across all files
-        buffer_count = 0            # Pointer to location in buffer
+        buffer_count = 0
         print ("DEBUG> Enter file load loop")
-        for f in self.filenames:
-            x = np.load(f,allow_pickle = True,encoding='latin1').item()
-            for kk in x.keys():
+        if self.shard_sample is None or self.shard_sample >= len(self.filenames):
+            samples_ix = self.ix_permutation[0:self.BUFFERSIZE]
+            self.samples_consumed += self.BUFFERSIZE
+            if self.samples_consumed >= self.sample_count:                     # Reshuffle or roll
+                self.samples_consumed = 0  # Num of samples consumed so far.
+                self.ix_permutation = np.random.permutation(self.sample_count)
+            else:
+                self.ix_permutation = np.roll(self.ix_permutation, self.BUFFERSIZE*-1)
 
-                fluxes = np.asarray(x[kk]['FLUX'])
-                labels_classifier = np.asarray(x[kk]['labels_classifier'])
-                labels_offset = np.asarray(x[kk]['labels_offset'])
-                col_density = np.asarray(x[kk]['col_density'])
+            distributed_ix = 0          # Counts samples across all files
+            for f in self.filenames:
+                x = np.load(f,allow_pickle = True,encoding='latin1').item()
+                for kk in x.keys():
 
-                x_len = labels_classifier.shape[0]
-                x_ixs = samples_ix[(samples_ix >= distributed_ix) & (samples_ix < distributed_ix + x_len)] - distributed_ix
-                distributed_ix += x_len
-            # print "DEBUG> FILE LOOP: [%s] loaded %d samples" % (f, len(x_ixs))
+                    fluxes = np.asarray(x[kk]['FLUX'])
+                    labels_classifier = np.asarray(x[kk]['labels_classifier'])
+                    labels_offset = np.asarray(x[kk]['labels_offset'])
+                    col_density = np.asarray(x[kk]['col_density'])
 
-                if self.matrix_size > 1:
-                    data['fluxes'][buffer_count:buffer_count + len(x_ixs), :, :] = fluxes[x_ixs]
-                else:
-                    data['fluxes'][buffer_count:buffer_count + len(x_ixs)] = fluxes[x_ixs]
-                data['labels_classifier'][buffer_count:buffer_count + len(x_ixs)] = labels_classifier[x_ixs]
-                data['labels_offset'][buffer_count:buffer_count + len(x_ixs)] = labels_offset[x_ixs]
-                data['col_density'][buffer_count:buffer_count + len(x_ixs)] = col_density[x_ixs]
+                    x_len = labels_classifier.shape[0]
+                    x_ixs = samples_ix[(samples_ix >= distributed_ix) & (samples_ix < distributed_ix + x_len)] - distributed_ix
+                    distributed_ix += x_len
+                # print "DEBUG> FILE LOOP: [%s] loaded %d samples" % (f, len(x_ixs))
 
-                buffer_count += len(x_ixs)
+                    if self.matrix_size > 1:
+                        data['fluxes'][buffer_count:buffer_count + len(x_ixs), :, :] = fluxes[x_ixs]
+                    else:
+                        data['fluxes'][buffer_count:buffer_count + len(x_ixs)] = fluxes[x_ixs]
+                    data['labels_classifier'][buffer_count:buffer_count + len(x_ixs)] = labels_classifier[x_ixs]
+                    data['labels_offset'][buffer_count:buffer_count + len(x_ixs)] = labels_offset[x_ixs]
+                    data['col_density'][buffer_count:buffer_count + len(x_ixs)] = col_density[x_ixs]
+
+                    buffer_count += len(x_ixs)
+        else:
+            while buffer_count < self.BUFFERSIZE:
+                pick = self.rng.choice(self.filenames, size=min(self.shard_sample, len(self.filenames)), replace=False)
+                for f in pick:
+                    x = np.load(f, allow_pickle=True, encoding='latin1').item()
+                    for kk in x.keys():
+                        fluxes = np.asarray(x[kk]['FLUX'])
+                        labels_classifier = np.asarray(x[kk]['labels_classifier'])
+                        labels_offset = np.asarray(x[kk]['labels_offset'])
+                        col_density = np.asarray(x[kk]['col_density'])
+
+                        x_len = labels_classifier.shape[0]
+                        if x_len == 0:
+                            continue
+                        remaining = self.BUFFERSIZE - buffer_count
+                        take = min(x_len, remaining)
+                        if take == x_len:
+                            x_ixs = slice(None)
+                        else:
+                            x_ixs = self.rng.choice(x_len, size=take, replace=False)
+
+                        if self.matrix_size > 1:
+                            data['fluxes'][buffer_count:buffer_count + take, :, :] = fluxes[x_ixs]
+                        else:
+                            data['fluxes'][buffer_count:buffer_count + take] = fluxes[x_ixs]
+                        data['labels_classifier'][buffer_count:buffer_count + take] = labels_classifier[x_ixs]
+                        data['labels_offset'][buffer_count:buffer_count + take] = labels_offset[x_ixs]
+                        data['col_density'][buffer_count:buffer_count + take] = col_density[x_ixs]
+
+                        buffer_count += take
+                        if buffer_count >= self.BUFFERSIZE:
+                            break
+                    if buffer_count >= self.BUFFERSIZE:
+                        break
         print ("DEBUG> File load loop complete")
 
         return data
