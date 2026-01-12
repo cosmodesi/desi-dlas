@@ -25,6 +25,10 @@ export REPO_ROOT=/path/to/desi-dlas
 export RUNNER=$REPO_ROOT/Run_DLAfinder/desi_DLAfinder_run.py
 export SCR_OUT=$SCRATCH/DLAfinder_out/y3_saclay
 
+# Optional: use retrained checkpoints (unset to use defaults)
+# export DESIDLAS_CKPT_LOW=/pscratch/sd/<user>/retraining/models/low/current_135000
+# export DESIDLAS_CKPT_MID=/pscratch/sd/<user>/retraining/models/mid/current_99999
+
 # ---- Configure dataset ----
 DATA_TYPE=mock          # mock | data
 SPECTRA_ROOT=/path/to/spectra/root
@@ -37,12 +41,21 @@ PROGRAM=dark            # optional (data)
 VERSION=v0              # optional (data)
 
 # ---- Prediction settings ----
-BATCH_SIZE=256
-MAX_WINDOWS=8192
+BATCH_SIZE=512
+MAX_WINDOWS=16384
 
 # ---- Work range ----
-TOTAL=200
 GPU_PER_NODE=4
+TOTAL=$(python3 - <<'PY'
+import glob, os, numpy as np
+root = os.environ.get("LIST_CACHE_ROOT", "")
+files = sorted(glob.glob(os.path.join(root, "filelist_*.npz")), key=os.path.getmtime)
+if not files:
+    raise SystemExit("No list cache found in LIST_CACHE_ROOT. Run once with --rebuild-list.")
+d = np.load(files[-1])
+print(len(d["spectra"]))
+PY
+)
 CHUNK=$(( (TOTAL + GPU_PER_NODE - 1) / GPU_PER_NODE ))
 BASE_START=$(( SLURM_ARRAY_TASK_ID * GPU_PER_NODE * CHUNK ))
 
@@ -71,6 +84,5 @@ srun --ntasks=${GPU_PER_NODE} --gpus-per-task=1 --cpus-per-task=4 \
     --release '"$RELEASE"' --survey '"$SURVEY"' --program '"$PROGRAM"' --version '"$VERSION"' \
     --value $start --length $len \
     --batch-size '"$BATCH_SIZE"' --max-windows '"$MAX_WINDOWS"' \
-    --scratch-out "'"$SCR_OUT"'" \
-    --generate-sightlines
+    --scratch-out "'"$SCR_OUT"'"
 '
