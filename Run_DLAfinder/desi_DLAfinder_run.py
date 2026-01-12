@@ -77,6 +77,8 @@ def parse_args(options=None):
                         help="Stack catalogs from current range or all cached files.")
     parser.add_argument("--skip-existing-pred", action="store_true",
                         help="Skip prediction/catalog generation when pred output already exists.")
+    parser.add_argument("--fill-missing-dlacat", action="store_true",
+                        help="When skipping predictions, fill missing catalogs from existing pred files.")
 
     if options is None:
         return parser.parse_args()
@@ -322,7 +324,16 @@ def main():
     if args.skip_existing_pred:
         pred_exists = np.array([os.path.exists(p) for p in pred_sel])
         if np.all(pred_exists):
-            print("All predictions already exist; skipping prediction.")
+            if args.fill_missing_dlacat:
+                from desidlas.prediction.pred_sightline import save_pred_all
+                missing = np.array([not os.path.exists(p) for p in dlacat_sel])
+                if np.any(missing):
+                    print("Filling missing dlacat from existing predictions...")
+                    save_pred_all(sightline_sel[missing], pred_sel[missing], dlacat_sel[missing])
+                else:
+                    print("All predictions and catalogs already exist; skipping.")
+            else:
+                print("All predictions already exist; skipping prediction.")
             return
         sightline_sel = sightline_sel[~pred_exists]
         pred_sel = pred_sel[~pred_exists]
