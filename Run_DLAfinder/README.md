@@ -79,6 +79,18 @@ Optional:
 - `--scratch-out` to write predictions/catalogs to a separate location
 - `--batch-size` and `--max-windows` for GPU tuning (defaults: 512 / 16384)
 
+## Use Retrained Models (Optional)
+
+By default, prediction uses the legacy checkpoints. To switch to retrained models,
+set environment variables before running:
+
+```bash
+export DESIDLAS_CKPT_LOW=/pscratch/sd/t/<user>/retraining/models/low/current_135000
+export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
+```
+
+Unset them to return to the default models.
+
 ### Data (minimal + survey/program/version)
 
 ```bash
