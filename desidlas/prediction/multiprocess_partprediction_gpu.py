@@ -425,8 +425,12 @@ def predictions_desi_gpu(pred_sightlines, savefile, batch_size=128, max_windows_
         print(f"  Total sightlines:     {total_sightlines}")
         print(f"  Prediction time:      {Timer('').format_time(prediction_elapsed)}")
         print(f"  File total time:      {Timer('').format_time(file_elapsed)}")
-        print(f"  Throughput:           {total_sightlines/prediction_elapsed:.2f} sightlines/sec")
-        print(f"  Avg per sightline:    {prediction_elapsed/total_sightlines*1000:.2f} ms")
+        if total_sightlines > 0:
+            print(f"  Throughput:           {total_sightlines/prediction_elapsed:.2f} sightlines/sec")
+            print(f"  Avg per sightline:    {prediction_elapsed/total_sightlines*1000:.2f} ms")
+        else:
+            print("  Throughput:           n/a (no sightlines)")
+            print("  Avg per sightline:    n/a (no sightlines)")
         if len(batch_times) > 0:
             print(f"  Avg per batch:        {np.mean(batch_times):.3f}s")
         
