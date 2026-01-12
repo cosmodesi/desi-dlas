@@ -84,5 +84,6 @@ srun --ntasks=${GPU_PER_NODE} --gpus-per-task=1 --cpus-per-task=4 \
     --release '"$RELEASE"' --survey '"$SURVEY"' --program '"$PROGRAM"' --version '"$VERSION"' \
     --value $start --length $len \
     --batch-size '"$BATCH_SIZE"' --max-windows '"$MAX_WINDOWS"' \
-    --scratch-out "'"$SCR_OUT"'"
+    --scratch-out "'"$SCR_OUT"'" \
+    --generate-sightlines
 '
