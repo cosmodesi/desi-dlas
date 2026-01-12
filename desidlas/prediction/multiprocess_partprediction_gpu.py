@@ -103,8 +103,14 @@ class DLAModelGPU:
         """初始化并加载两个模型（mid/low SNR）"""
         self.models = {}
         self.model_paths = {
-            'mid': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
-            'low': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'
+            'mid': os.environ.get(
+                'DESIDLAS_CKPT_MID',
+                '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
+            ),
+            'low': os.environ.get(
+                'DESIDLAS_CKPT_LOW',
+                '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+            ),
         }
         
         print(f"\n{'='*80}")

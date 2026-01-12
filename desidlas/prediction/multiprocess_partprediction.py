@@ -30,9 +30,18 @@ from desidlas.training.model import build_model
 MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 4}
 INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 600}
 CKPT = {
-    'high': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
-    'mid':  '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
-    'low':  '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+    'high': os.environ.get(
+        'DESIDLAS_CKPT_HIGH',
+        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
+    ),
+    'mid': os.environ.get(
+        'DESIDLAS_CKPT_MID',
+        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
+    ),
+    'low': os.environ.get(
+        'DESIDLAS_CKPT_LOW',
+        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+    ),
 }
 
 # ---- 工具函数 ----
