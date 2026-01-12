@@ -75,6 +75,8 @@ def parse_args(options=None):
                         help="Output FITS path for stacked catalog.")
     parser.add_argument("--stack-scope", choices=["range", "all"], default="all",
                         help="Stack catalogs from current range or all cached files.")
+    parser.add_argument("--skip-existing-pred", action="store_true",
+                        help="Skip prediction/catalog generation when pred output already exists.")
 
     if options is None:
         return parser.parse_args()
@@ -316,6 +318,15 @@ def main():
     sightline_sel = sightline_sel[existing_mask]
     pred_sel = pred_sel[existing_mask]
     dlacat_sel = dlacat_sel[existing_mask]
+
+    if args.skip_existing_pred:
+        pred_exists = np.array([os.path.exists(p) for p in pred_sel])
+        if np.all(pred_exists):
+            print("All predictions already exist; skipping prediction.")
+            return
+        sightline_sel = sightline_sel[~pred_exists]
+        pred_sel = pred_sel[~pred_exists]
+        dlacat_sel = dlacat_sel[~pred_exists]
 
     _ensure_parent_dirs(pred_sel)
     _ensure_parent_dirs(dlacat_sel)
