@@ -327,6 +327,9 @@ def main():
         sightline_sel = sightline_sel[~pred_exists]
         pred_sel = pred_sel[~pred_exists]
         dlacat_sel = dlacat_sel[~pred_exists]
+        if len(sightline_sel) == 0:
+            print("No pending predictions after skip-existing check.")
+            return
 
     _ensure_parent_dirs(pred_sel)
     _ensure_parent_dirs(dlacat_sel)
