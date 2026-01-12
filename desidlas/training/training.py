@@ -190,7 +190,18 @@ def train_ann(hyperparameters, train_dataset, test_dataset, INPUT_SIZE, matrix_s
             start_iter = 0
             if load_filename is not None:
                 tf.compat.v1.train.Saver().restore(sess, load_filename + ".ckpt")
-                start_iter = int(sess.run(t('global_step')))
+                try:
+                    step_val = np.asarray(sess.run(t('global_step')))
+                    if step_val.size == 1:
+                        start_iter = int(step_val.item())
+                    else:
+                        start_iter = int(step_val.max())
+                except Exception:
+                    start_iter = 0
+                if start_iter == 0:
+                    match = re.search(r'_(\d+)$', os.path.basename(load_filename))
+                    if match:
+                        start_iter = int(match.group(1))
                 print("Resuming from step %d" % start_iter)
             else:
                
