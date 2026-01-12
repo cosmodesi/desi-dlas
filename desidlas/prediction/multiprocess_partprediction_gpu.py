@@ -100,10 +100,9 @@ class DLAModelGPU:
     """GPU版本的DLA检测模型包装器"""
     
     def __init__(self):
-        """初始化并加载三个模型（high/mid/low SNR）"""
+        """初始化并加载两个模型（mid/low SNR）"""
         self.models = {}
         self.model_paths = {
-            'high': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
             'mid': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
             'low': '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'
         }
@@ -113,7 +112,7 @@ class DLAModelGPU:
         print(f"{'='*80}")
         
         total_load_time = 0
-        for model_type in ['high', 'mid', 'low']:
+        for model_type in ['mid', 'low']:
             print(f"\nLoading {model_type.upper()} SNR model...")
             with Timer(f"{model_type}_model_load") as t:
                 self.models[model_type] = self._load_tf1_model(
@@ -202,8 +201,8 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
     
     # 第一步：收集所有数据并按SNR分组
     with Timer("data_preprocessing") as t:
-        all_flux = {'high': [], 'mid': [], 'low': []}
-        all_metadata = {'high': [], 'mid': [], 'low': []}
+        all_flux = {'mid': [], 'low': []}
+        all_metadata = {'mid': [], 'low': []}
         
         for idx, sightline in enumerate(sightlines_batch):
             if sightline == [] or sightline is None:
@@ -220,13 +219,8 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
                 n_windows = flux.shape[0]
                 
                 # 根据SNR分类
-                if hasattr(sightline, 's2n'):
-                    if sightline.s2n >= 7:
-                        model_type = 'high'
-                    elif sightline.s2n >= 3:
-                        model_type = 'mid'
-                    else:
-                        model_type = 'low'
+                if hasattr(sightline, 's2n') and sightline.s2n < 3:
+                    model_type = 'low'
                 else:
                     model_type = 'mid'
                 
@@ -246,7 +240,7 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
     # 第二步：对每个SNR类别进行大batch预测
     all_predictions = {}
     
-    for model_type in ['high', 'mid', 'low']:
+    for model_type in ['mid', 'low']:
         if len(all_flux[model_type]) == 0:
             continue
         
