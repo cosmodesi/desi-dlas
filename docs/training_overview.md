@@ -109,6 +109,18 @@ Outputs:
 - `y_nn_offset` (offset regression)
 - `y_nn_coldensity` (column density regression)
 
+Architecture details (defaults from `parameterset.py`):
+- Conv1: kernel=40, filters=100, stride=5
+- Pool1: kernel=7, stride=1 (max pool)
+- Conv2: kernel=32, filters=256, stride=2
+- Pool2: kernel=4, stride=5 (max pool)
+- Conv3: kernel=20, filters=128, stride=1
+- Pool3: kernel=6, stride=6 (max pool)
+- FC1: 500 neurons (shared)
+- FC2 heads: 700 / 500 / 150 neurons (classifier / offset / coldensity)
+- Dropout keep_prob: 0.9
+- L2 regularization: 0.005
+
 Losses:
 - Classifier: weighted sigmoid cross-entropy (`pos_weight` supported)
 - Offset regression: masked MSE (computed on positive samples only)
@@ -117,6 +129,18 @@ Losses:
 
 Optimizer:
 - Adam (`tf.compat.v1.train.AdamOptimizer`)
+
+Training loop details:
+- `training_iters`: 100000 by default.
+- Every 200 iterations: evaluate on a random 10k sample from the training buffer.
+- Every 5000 iterations (and at end): evaluate on the full test dataset.
+- Checkpoint saved every 5000 iterations and at end.
+- Resume uses `global_step` from checkpoint; if missing, parses step from filename.
+
+Notes:
+- Training runs under TF1-style graph/session (`tf.compat.v1`).
+- Default device string is `'/gpu:1'`, but `allow_soft_placement=True` will fall back
+  to available GPU or CPU if needed.
 
 ## Hyperparameters
 
@@ -130,6 +154,23 @@ Default values are taken from `parameters[k][0]`. Overrides supported in
 Low-SNR defaults (added in training runner):
 - learning rate capped at `<= 2e-5` if `matrix_size==4`
 - `pos_weight=3.0` if not specified
+
+Key default values (from `parameters[k][0]`):
+- learning_rate: `5e-4`
+- training_iters: `100000`
+- batch_size: `400`
+- dropout_keep_prob: `0.9`
+- l2_regularization_penalty: `0.005`
+- fc1_n_neurons: `500`
+- fc2_1_n_neurons: `700`
+- fc2_2_n_neurons: `500`
+- fc2_3_n_neurons: `150`
+- conv1_kernel/filters/stride: `40 / 100 / 5`
+- conv2_kernel/filters/stride: `32 / 256 / 2`
+- conv3_kernel/filters/stride: `20 / 128 / 1`
+- pool1_kernel/stride: `7 / 1`
+- pool2_kernel/stride: `4 / 5`
+- pool3_kernel/stride: `6 / 6`
 
 ## Dataset Loader Behavior
 
@@ -148,6 +189,67 @@ In `training.py`, you can pass:
 ```
 to sample 20 shard files per buffer load.
 
+## Labeling, Windowing, and Sampling
+
+Source files:
+- `desidlas/datasets/preprocess.py`
+- `desidlas/datasets/datasetting.py`
+- `desidlas/datasets/get_dataset.py`
+- `desidlas/dla_cnn/defs.py`
+
+Constants:
+- `REST_RANGE = [900, 1346, 1748]`
+- `kernel = 400` (mid/high)
+- `smooth_kernel = 600` (low)
+- `best_v['all'] = 44735` m/s (rebin velocity)
+
+Labeling (`label_sightline`):
+- Builds `classification`, `offsets`, and `column_density` arrays over the
+  DLA search region.
+- Positive regions are centered on each DLA with a half-width of
+  `kernel * pos_sample_kernel_percent / 2` (default 0.3).
+- Regions around DLA and LyB are masked as `-1` in `classification`.
+- `offsets` encode pixel distance from DLA center with opposite sign on each side.
+- `column_density` is filled with each DLA’s NHI where applicable.
+
+Windowing (`split_sightline_into_samples`):
+- Builds a sliding window of length `kernel` centered on every pixel in the
+  DLA search region.
+- Uses padding to avoid dropping edge windows.
+- Returns `fluxes_matrix`, `lam_matrix`, and per-window labels.
+
+Sampling (`select_samples_50p_pos_neg`):
+- For each sightline, randomly selects an equal number of positive and negative
+  windows (`min(num_pos, num_neg)`).
+- This is a per-sightline balance step, not a global class rebalance.
+
+Shard format (training):
+- Each shard is a dict keyed by `sightline.id`.
+- Each entry contains:
+  - `FLUX`: array of windows
+    - mid: `[n_samples, 400]`
+    - low: `[n_samples, 4, 600]` (raw + 3 medians)
+  - `labels_classifier`, `labels_offset`, `col_density`
+
+Low-SNR smoothing (`smooth_flux`):
+- For each window, compute median filters with widths 3, 7, 15.
+- Stack as `[raw, smooth3, smooth7, smooth15]`.
+
+## Improvement Levers for Algorithm Review
+
+Common levers an algorithm reviewer may want to test:
+- **Sampling balance**: per-sightline 50/50 can overweight rare DLAs in noisy
+  spectra; try global balance or hard-negative mining.
+- **S/N thresholds**: `s2n < 3` for low, otherwise mid. Adjust to 2/4/5 or
+  add a high-SNR bucket for improved specialization.
+- **Label mask width**: `pos_sample_kernel_percent` (default 0.3) controls
+  DLA positive span; tune for stability/recall.
+- **Loss weighting**: `pos_weight` or separate weights for offset/coldensity.
+- **Learning rate schedule**: fixed LR only; try cosine/step decay or warmup.
+- **Regularization**: L2 and dropout are static; explore larger dropout for low.
+- **Kernel/window size**: kernel=400/600; evaluate longer windows for low S/N.
+- **Architecture**: 3-layer conv trunk with 3 heads; consider deeper trunk
+  or shared attention over windows.
 ## Prediction Model Selection (Runtime)
 
 By default, prediction uses the legacy checkpoints. You can override at runtime:
