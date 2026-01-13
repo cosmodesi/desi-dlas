@@ -97,6 +97,14 @@ def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
             print(f"\nError processing file {i}: {e}")
             import traceback
             traceback.print_exc()
+            try:
+                out = Table(names=('TARGET_RA','TARGET_DEC','Z_QSO','Z_DLA','TARGETID',
+                                   'S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),
+                            dtype=('float','float','float','float','int','float','U50','float','float','float','U10'))
+                Path(dlacat_loc[i]).parent.mkdir(parents=True, exist_ok=True)
+                out.write(dlacat_loc[i], overwrite=True)
+            except Exception as write_exc:
+                print(f"  Warning: failed to write empty catalog: {write_exc}")
             continue
 
 '''
@@ -244,4 +252,3 @@ def get_results(real_catalog,pred_catalog,realname=None,predname=None,tpname=Non
     plt.xlabel('$\Delta$'+'log${N_{\mathregular{HI}}}$',fontsize=20)
     plt.tick_params(labelsize=18)
     plt.savefig('%s/delta_NHI.pdf'%(plot_path))
-
