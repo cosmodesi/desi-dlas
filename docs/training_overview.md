@@ -49,7 +49,8 @@ Reference: `Run_DLAfinder/README-training.md`
      --sightline-root /pscratch/sd/t/<user>/retraining/sightlines \
      --out-root /pscratch/sd/t/<user>/retraining/shards \
      --chunk-size 200 --workers 32 \
-     --low-min-s2n 1.0 --low-mid-s2n 1.5 --low-pos-sample-percent 0.2
+     --low-min-s2n 1.0 --low-mid-s2n 1.5 \
+     --low-pos-sample-percent 0.2 --low-pos-frac 0.25 --mid-pos-frac 0.5
    ```
 
 3) Train mid or low
@@ -242,8 +243,8 @@ Windowing (`split_sightline_into_samples`):
 - Returns `fluxes_matrix`, `lam_matrix`, and per-window labels.
 
 Sampling (`select_samples_50p_pos_neg`):
-- For each sightline, randomly selects an equal number of positive and negative
-  windows (`min(num_pos, num_neg)`).
+- For each sightline, randomly selects positive/negative windows based on a
+  target positive fraction (default 0.5 for mid, 0.25 for low).
 - This is a per-sightline balance step, not a global class rebalance.
 
 Shard format (training):

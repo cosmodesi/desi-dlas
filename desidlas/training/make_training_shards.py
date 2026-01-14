@@ -11,7 +11,7 @@ if REPO_ROOT not in sys.path:
 
 from desidlas.datasets import preprocess
 from desidlas.datasets.get_dataset import make_datasets, smooth_flux
-from desidlas.datasets.datasetting import split_sightline_into_samples, select_samples_50p_pos_neg
+from desidlas.datasets.datasetting import split_sightline_into_samples, select_samples_pos_neg_ratio
 from desidlas.dla_cnn import defs
 
 
@@ -20,7 +20,7 @@ OUT_ROOT = "/pscratch/sd/t/tanting/retraining/shards"
 CHUNK_SIZE = 50
 
 
-def make_smoothdatasets_chunked(sightlines, output, chunk_size=CHUNK_SIZE, pos_sample_kernel_percent=0.2):
+def make_smoothdatasets_chunked(sightlines, output, chunk_size=CHUNK_SIZE, pos_sample_kernel_percent=0.2, pos_fraction=0.25):
     dataset = {}
     count = 0
     file_idx = 0
@@ -36,7 +36,9 @@ def make_smoothdatasets_chunked(sightlines, output, chunk_size=CHUNK_SIZE, pos_s
         data_split = split_sightline_into_samples(
             sightline, REST_RANGE=defs.REST_RANGE, kernel=defs.smooth_kernel, v=defs.best_v['all']
         )
-        sample_masks = select_samples_50p_pos_neg(sightline, kernel=defs.smooth_kernel)
+        sample_masks = select_samples_pos_neg_ratio(
+            sightline, kernel=defs.smooth_kernel, pos_fraction=pos_fraction
+        )
         if len(sample_masks) > 0:
             flux = np.vstack([data_split[0][m] for m in sample_masks])
             labels_classifier = np.hstack([data_split[1][m] for m in sample_masks])
@@ -72,6 +74,10 @@ def parse_args():
                         help="Drop sightlines below this S/N threshold.")
     parser.add_argument("--low-mid-s2n", type=float, default=1.5,
                         help="Split low buckets at this S/N.")
+    parser.add_argument("--low-pos-frac", type=float, default=0.25,
+                        help="Positive fraction for low buckets.")
+    parser.add_argument("--mid-pos-frac", type=float, default=0.5,
+                        help="Positive fraction for mid bucket.")
     parser.add_argument("--low-pos-sample-percent", type=float, default=0.2,
                         help="Positive label width for low SNR as fraction of kernel.")
     parser.add_argument("--k-start", type=int, default=None, help="Start k (inclusive).")
@@ -104,7 +110,7 @@ def _prune_empty_shards(prefix):
 
 
 def _process_file(args):
-    f, out_root, chunk_size, low_min_s2n, low_pos_sample_percent, low_mid_s2n = args
+    f, out_root, chunk_size, low_min_s2n, low_pos_sample_percent, low_mid_s2n, low_pos_frac, mid_pos_frac = args
     sightlines = np.load(f, allow_pickle=True)
 
     mid = []
@@ -127,7 +133,13 @@ def _process_file(args):
     base = os.path.basename(f).replace(".npy", "")
     if mid:
         out_prefix = os.path.join(out_root, "mid", base)
-        make_datasets(mid, output=out_prefix, validate=False, chunk_size=chunk_size)
+        make_datasets(
+            mid,
+            output=out_prefix,
+            validate=False,
+            chunk_size=chunk_size,
+            pos_fraction=mid_pos_frac,
+        )
         _prune_empty_shards(out_prefix)
     if low1:
         out_prefix = os.path.join(out_root, "low1", base)
@@ -136,6 +148,7 @@ def _process_file(args):
             output=out_prefix,
             chunk_size=chunk_size,
             pos_sample_kernel_percent=low_pos_sample_percent,
+            pos_fraction=low_pos_frac,
         )
         _prune_empty_shards(out_prefix)
     if low2:
@@ -145,6 +158,7 @@ def _process_file(args):
             output=out_prefix,
             chunk_size=chunk_size,
             pos_sample_kernel_percent=low_pos_sample_percent,
+            pos_fraction=low_pos_frac,
         )
         _prune_empty_shards(out_prefix)
 
@@ -164,7 +178,8 @@ def main():
         files.extend(glob.glob(os.path.join(k_dir, "*", "sightlines-*.npy")))
 
     tasks = [
-        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.low_pos_sample_percent, args.low_mid_s2n)
+        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.low_pos_sample_percent,
+         args.low_mid_s2n, args.low_pos_frac, args.mid_pos_frac)
         for f in sorted(files)
     ]
     if args.workers <= 1:

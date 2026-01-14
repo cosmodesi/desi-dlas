@@ -1,6 +1,6 @@
 import numpy as np
 import scipy.signal as signal
-from desidlas.datasets.datasetting import split_sightline_into_samples,select_samples_50p_pos_neg,pad_sightline
+from desidlas.datasets.datasetting import split_sightline_into_samples,select_samples_pos_neg_ratio,pad_sightline
 from desidlas.datasets.preprocess import label_sightline
 from desidlas.dla_cnn.spectra_utils import get_lam_data
 from desidlas.dla_cnn import defs
@@ -9,7 +9,7 @@ kernel = defs.kernel
 smooth_kernel= defs.smooth_kernel
 best_v = defs.best_v
 
-def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['all'], output=None, validate=True, chunk_size=100):
+def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['all'], output=None, validate=True, chunk_size=100, pos_fraction=0.5):
     """
     Generate training set or validation set for DESI.
 
@@ -50,7 +50,7 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
                 'coldensity_dlas': coldensity_dlas
             }
         else:
-            sample_masks = select_samples_50p_pos_neg(sightline, kernel=kernel)
+            sample_masks = select_samples_pos_neg_ratio(sightline, kernel=kernel, pos_fraction=pos_fraction)
             # 判断 sample_masks 非空, 这里根据实际类型调整判断方式：
             if len(sample_masks) > 0:
                 flux = np.vstack([data_split[0][m] for m in sample_masks])

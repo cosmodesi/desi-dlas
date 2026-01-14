@@ -101,7 +101,7 @@ def split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel
     return fluxes_matrix, sightline.classification, sightline.offsets, sightline.column_density,lam_matrix,input_lam,input_flux
    
 
-def select_samples_50p_pos_neg(sightline,kernel=kernel):
+def select_samples_pos_neg_ratio(sightline, kernel=kernel, pos_fraction=0.5):
     """
     For a given sightline, generate the indices for DLAs and for without
     Split 50/50 to have equal representation
@@ -124,12 +124,25 @@ def select_samples_50p_pos_neg(sightline,kernel=kernel):
     
     num_pos = np.sum(sightline.classification==1, dtype=np.float64) #count the quantity of all positive samples(classification=1,with DLAs)
     num_neg = np.sum(sightline.classification==0, dtype=np.float64)#count the quantity of all negtive samples
-    n_samples = int(min(num_pos, num_neg)) #take the minimum of these two quantities
+    if num_pos == 0 or num_neg == 0:
+        return np.array([], dtype=int)
+    pos_fraction = float(pos_fraction)
+    if pos_fraction <= 0 or pos_fraction >= 1:
+        return np.array([], dtype=int)
+    # compute max samples preserving target ratio
+    n_pos = int(min(num_pos, num_neg * pos_fraction / (1.0 - pos_fraction)))
+    n_neg = int(n_pos * (1.0 - pos_fraction) / pos_fraction)
+    n_pos = max(n_pos, 0)
+    n_neg = max(n_neg, 0)
 
     r = np.random.permutation(len(sightline.classification))#make a random array
 
-    pos_ixs = r[sightline.classification[r]==1][0:n_samples]# index for positive samples
-    neg_ixs = r[sightline.classification[r]==0][0:n_samples]# index for negative samples
+    pos_ixs = r[sightline.classification[r]==1][0:n_pos]# index for positive samples
+    neg_ixs = r[sightline.classification[r]==0][0:n_neg]# index for negative samples
     
     return np.hstack((pos_ixs,neg_ixs))
+
+
+def select_samples_50p_pos_neg(sightline, kernel=kernel):
+    return select_samples_pos_neg_ratio(sightline, kernel=kernel, pos_fraction=0.5)
     
