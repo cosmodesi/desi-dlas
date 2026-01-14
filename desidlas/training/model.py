@@ -175,8 +175,11 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     #x: the empty tensor need to be filled with the input data
     if matrix_size == 1:
         x = tf.compat.v1.placeholder(tf.float32, shape=[None,INPUT_SIZE], name='x')
+        x_in = x
     if matrix_size == 4:
         x = tf.compat.v1.placeholder(tf.float32, shape=[None,matrix_size, INPUT_SIZE], name='x')
+        # Input comes as [batch, channels, length]; transpose to [batch, length, channels].
+        x_in = tf.transpose(x, [0, 2, 1])
    
     
     #claim the tensor for three labels
@@ -186,7 +189,7 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     keep_prob = tf.compat.v1.placeholder(tf.float32, name='keep_prob')
     global_step = tf.Variable(0, name='global_step', trainable=False)
 
-    x_4d = tf.reshape(x, [-1, INPUT_SIZE, 1,matrix_size]) #reshape the data size
+    x_4d = tf.reshape(x_in, [-1, INPUT_SIZE, 1, matrix_size]) #reshape the data size
     # First Convolutional Layer
     # Kernel size (16,1)
     # Stride (4,1)

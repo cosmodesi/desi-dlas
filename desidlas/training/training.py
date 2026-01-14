@@ -340,6 +340,7 @@ if __name__ == '__main__':
     parser.add_argument('--split-seed', type=int, default=42, help='Random seed for train/val split.')
     parser.add_argument('--learning-rate', type=float, default=None, help='Override learning rate.')
     parser.add_argument('--pos-weight', type=float, default=None, help='Positive class weight for classifier loss.')
+    parser.add_argument('--training-iters', type=int, default=None, help='Override training iterations.')
     parser.add_argument('--shard-sample', type=int, default=None, help='Number of shard files to sample per buffer load.')
     args = vars(parser.parse_args())
 
@@ -389,14 +390,16 @@ if __name__ == '__main__':
     #choose the hyperparameters
     for k in range(0,len(parameter_names)):
         hyperparameters[parameter_names[k]] = parameters[k][0]
+    if args['training_iters'] is not None:
+        hyperparameters['training_iters'] = args['training_iters']
     if args['learning_rate'] is not None:
         hyperparameters['learning_rate'] = args['learning_rate']
     elif matrix_size == 4:
-        hyperparameters['learning_rate'] = min(hyperparameters['learning_rate'], 2e-5)
+        hyperparameters['learning_rate'] = min(hyperparameters['learning_rate'], 5e-5)
     if args['pos_weight'] is not None:
         hyperparameters['pos_weight'] = args['pos_weight']
     elif matrix_size == 4:
-        hyperparameters['pos_weight'] = 3.0
+        hyperparameters['pos_weight'] = 1.0
 
     #start the training
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,

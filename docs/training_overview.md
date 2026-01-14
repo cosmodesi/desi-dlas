@@ -36,6 +36,7 @@ Reference: `Run_DLAfinder/README-training.md`
 
 2) Build training shards (mid + low)
    - Splits by S/N: `s2n < 3` → low, otherwise mid.
+   - Low drops very low S/N by default (`--low-min-s2n 1.0`).
    - Low uses smoothed fluxes (4-channel), mid uses raw flux.
    - Output shards saved under `/shards/mid` and `/shards/low`.
 
@@ -44,14 +45,15 @@ Reference: `Run_DLAfinder/README-training.md`
    python3 desidlas/training/make_training_shards.py \
      --sightline-root /pscratch/sd/t/<user>/retraining/sightlines \
      --out-root /pscratch/sd/t/<user>/retraining/shards \
-     --chunk-size 200 --workers 32
+     --chunk-size 200 --workers 32 \
+     --low-min-s2n 1.0 --low-pos-sample-percent 0.2
    ```
 
 3) Train mid or low
    - Mid: `INPUT_SIZE=400, matrix_size=1`
    - Low: `INPUT_SIZE=600, matrix_size=4`
    - Supports `--split` to create a validation split from the training glob.
-   - Supports overrides for `--learning-rate` and `--pos-weight`.
+   - Supports overrides for `--learning-rate`, `--pos-weight`, and `--training-iters`.
 
    Example (mid):
    ```bash
@@ -71,8 +73,9 @@ Reference: `Run_DLAfinder/README-training.md`
      -c /pscratch/sd/t/<user>/retraining/models/low/current \
      -t 600 -m 4 \
      --split 0.1 \
-     --learning-rate 2e-5 \
-     --pos-weight 3.0
+     --learning-rate 5e-5 \
+     --pos-weight 1.0 \
+     --training-iters 800000
    ```
 
 4) Resume training from checkpoint
@@ -96,6 +99,10 @@ Source: `desidlas/training/model.py`
 Input:
 - Mid: shape `[batch, 400]` → reshaped to `[batch, 400, 1, 1]`
 - Low: shape `[batch, 4, 600]` → reshaped to `[batch, 600, 1, 4]`
+
+Low input handling detail:
+- Low shards are stored channel-first (`[batch, 4, 600]`).
+- Training transposes to `[batch, 600, 4]` before reshaping to NHWC.
 
 Network:
 - 3 convolution layers (1D implemented as 2D conv with width=1)
@@ -152,8 +159,8 @@ Default values are taken from `parameters[k][0]`. Overrides supported in
 - `--pos-weight` (float)
 
 Low-SNR defaults (added in training runner):
-- learning rate capped at `<= 2e-5` if `matrix_size==4`
-- `pos_weight=3.0` if not specified
+- learning rate capped at `<= 5e-5` if `matrix_size==4`
+- `pos_weight=1.0` if not specified
 
 Key default values (from `parameters[k][0]`):
 - learning_rate: `5e-4`

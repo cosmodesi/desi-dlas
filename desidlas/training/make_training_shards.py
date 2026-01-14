@@ -20,14 +20,19 @@ OUT_ROOT = "/pscratch/sd/t/tanting/retraining/shards"
 CHUNK_SIZE = 50
 
 
-def make_smoothdatasets_chunked(sightlines, output, chunk_size=CHUNK_SIZE):
+def make_smoothdatasets_chunked(sightlines, output, chunk_size=CHUNK_SIZE, pos_sample_kernel_percent=0.2):
     dataset = {}
     count = 0
     file_idx = 0
     for sightline in sightlines:
         if sightline == []:
             continue
-        preprocess.label_sightline(sightline, kernel=defs.smooth_kernel, REST_RANGE=defs.REST_RANGE)
+        preprocess.label_sightline(
+            sightline,
+            kernel=defs.smooth_kernel,
+            REST_RANGE=defs.REST_RANGE,
+            pos_sample_kernel_percent=pos_sample_kernel_percent,
+        )
         data_split = split_sightline_into_samples(
             sightline, REST_RANGE=defs.REST_RANGE, kernel=defs.smooth_kernel, v=defs.best_v['all']
         )
@@ -63,6 +68,10 @@ def parse_args():
     parser.add_argument("--sightline-root", default=os.path.dirname(SIGHTLINE_GLOB.rstrip("*/")))
     parser.add_argument("--out-root", default=OUT_ROOT)
     parser.add_argument("--chunk-size", type=int, default=CHUNK_SIZE)
+    parser.add_argument("--low-min-s2n", type=float, default=1.0,
+                        help="Drop low-SNR sightlines below this threshold.")
+    parser.add_argument("--low-pos-sample-percent", type=float, default=0.2,
+                        help="Positive label width for low SNR as fraction of kernel.")
     parser.add_argument("--k-start", type=int, default=None, help="Start k (inclusive).")
     parser.add_argument("--k-end", type=int, default=None, help="End k (exclusive).")
     parser.add_argument("--workers", type=int, default=max(1, cpu_count()))
@@ -93,7 +102,7 @@ def _prune_empty_shards(prefix):
 
 
 def _process_file(args):
-    f, out_root, chunk_size = args
+    f, out_root, chunk_size, low_min_s2n, low_pos_sample_percent = args
     sightlines = np.load(f, allow_pickle=True)
 
     mid = []
@@ -103,6 +112,8 @@ def _process_file(args):
             continue
         if not hasattr(s, "s2n") or s.s2n is None:
             s.s2n = preprocess.estimate_s2n(s)
+        if s.s2n < low_min_s2n:
+            continue
         if s.s2n < 3:
             low.append(s)
         else:
@@ -115,7 +126,12 @@ def _process_file(args):
         _prune_empty_shards(out_prefix)
     if low:
         out_prefix = os.path.join(out_root, "low", base)
-        make_smoothdatasets_chunked(low, output=out_prefix, chunk_size=chunk_size)
+        make_smoothdatasets_chunked(
+            low,
+            output=out_prefix,
+            chunk_size=chunk_size,
+            pos_sample_kernel_percent=low_pos_sample_percent,
+        )
         _prune_empty_shards(out_prefix)
 
 
@@ -132,7 +148,10 @@ def main():
         k_dir = os.path.join(sightline_root, k)
         files.extend(glob.glob(os.path.join(k_dir, "*", "sightlines-*.npy")))
 
-    tasks = [(f, args.out_root, args.chunk_size) for f in sorted(files)]
+    tasks = [
+        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.low_pos_sample_percent)
+        for f in sorted(files)
+    ]
     if args.workers <= 1:
         for task in tasks:
             _process_file(task)
