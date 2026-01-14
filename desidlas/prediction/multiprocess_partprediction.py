@@ -265,5 +265,19 @@ def predictions_desi(pred_sightlines, savefile):
         return
 
     assert len(pred_sightlines) == len(savefile), "路径列表长度不一致"
-    for in_path, out_path in zip(pred_sightlines, savefile):
-        pred_file_fast(in_path, out_path)
+    workers = int(os.environ.get("DESIDLAS_CPU_WORKERS", "1"))
+    if workers <= 1:
+        for in_path, out_path in zip(pred_sightlines, savefile):
+            pred_file_fast(in_path, out_path)
+        return
+
+    try:
+        import multiprocessing as mp
+        ctx = mp.get_context("fork")
+    except Exception:
+        import multiprocessing as mp
+        ctx = mp
+
+    args = list(zip(pred_sightlines, savefile))
+    with ctx.Pool(processes=workers) as pool:
+        list(pool.starmap(pred_file_fast, args))
