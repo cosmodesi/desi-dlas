@@ -280,12 +280,28 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     y_nn_coldensity = tf.reshape(y_fc4_3, [-1], name='y_nn_coldensity')
 
     # Train and Evaluate the model
-    pos_weight = hyperparameters.get('pos_weight', 1.0)
-    loss_classifier = tf.add(tf.nn.weighted_cross_entropy_with_logits(
-                                logits=y_nn_classifier, labels=label_classifier, pos_weight=pos_weight),
-                             l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
-                                                          tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
-                             name='loss_classifier')
+    use_focal = bool(hyperparameters.get('use_focal', False))
+    if use_focal:
+        gamma = float(hyperparameters.get('focal_gamma', 2.0))
+        alpha = float(hyperparameters.get('focal_alpha', 0.25))
+        ce = tf.nn.sigmoid_cross_entropy_with_logits(logits=y_nn_classifier, labels=label_classifier)
+        p = tf.sigmoid(y_nn_classifier)
+        p_t = tf.where(tf.equal(label_classifier, 1.0), p, 1.0 - p)
+        alpha_t = tf.where(tf.equal(label_classifier, 1.0), alpha, 1.0 - alpha)
+        focal = alpha_t * tf.pow(1.0 - p_t, gamma) * ce
+        loss_classifier = tf.add(
+            focal,
+            l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
+                                         tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
+            name='loss_classifier',
+        )
+    else:
+        pos_weight = hyperparameters.get('pos_weight', 1.0)
+        loss_classifier = tf.add(tf.nn.weighted_cross_entropy_with_logits(
+                                    logits=y_nn_classifier, labels=label_classifier, pos_weight=pos_weight),
+                                 l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
+                                                              tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
+                                 name='loss_classifier')
     pos_mask = tf.cast(tf.equal(label_classifier, 1.0), tf.float32)
     pos_count = tf.reduce_sum(input_tensor=pos_mask) + 1e-6
     offset_residual = tf.square(y_nn_offset - label_offset)
@@ -302,14 +318,33 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
                                      tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1))
     loss_coldensity_regression = tf.identity(loss_coldensity_regression, name='loss_coldensity_regression')
 
-    optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=learning_rate)
+    lr = tf.cast(learning_rate, tf.float32)
+    decay_steps = int(hyperparameters.get('lr_decay_steps', 0))
+    if decay_steps > 0:
+        min_ratio = float(hyperparameters.get('lr_min_ratio', 0.1))
+        lr = tf.compat.v1.train.cosine_decay(lr, global_step, decay_steps, alpha=min_ratio)
+        warmup_steps = int(hyperparameters.get('lr_warmup_steps', 0))
+        if warmup_steps > 0:
+            warmup_lr = tf.cast(learning_rate, tf.float32) * tf.minimum(
+                1.0, tf.cast(global_step, tf.float32) / float(warmup_steps)
+            )
+            lr = tf.where(global_step < warmup_steps, warmup_lr, lr)
+
+    optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=lr)
     
     #combine three loss functions(for classification, offset and column density) to minimize
     cost_all_samples_lossfns_AB = loss_classifier + loss_offset_regression
     cost_pos_samples_lossfns_ABC = loss_classifier + loss_offset_regression + loss_coldensity_regression
     
     #minimize the total loss fucntion
-    train_step_ABC = optimizer.minimize(cost_pos_samples_lossfns_ABC, global_step=global_step, name='train_step_ABC')
+    clip_norm = float(hyperparameters.get('clip_norm', 0.0))
+    if clip_norm > 0:
+        grads_vars = optimizer.compute_gradients(cost_pos_samples_lossfns_ABC)
+        grads, vars_ = zip(*grads_vars)
+        clipped, _ = tf.clip_by_global_norm(grads, clip_norm)
+        train_step_ABC = optimizer.apply_gradients(zip(clipped, vars_), global_step=global_step, name='train_step_ABC')
+    else:
+        train_step_ABC = optimizer.minimize(cost_pos_samples_lossfns_ABC, global_step=global_step, name='train_step_ABC')
     
     #get the accuracy, offset and column density results
     # tf.sigmoid: make output within the range[0,1]

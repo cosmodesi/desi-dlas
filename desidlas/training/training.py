@@ -341,6 +341,13 @@ if __name__ == '__main__':
     parser.add_argument('--learning-rate', type=float, default=None, help='Override learning rate.')
     parser.add_argument('--pos-weight', type=float, default=None, help='Positive class weight for classifier loss.')
     parser.add_argument('--training-iters', type=int, default=None, help='Override training iterations.')
+    parser.add_argument('--use-focal', action='store_true', help='Use focal loss for classifier head.')
+    parser.add_argument('--focal-gamma', type=float, default=2.0, help='Focal loss gamma.')
+    parser.add_argument('--focal-alpha', type=float, default=0.25, help='Focal loss alpha.')
+    parser.add_argument('--lr-decay-steps', type=int, default=0, help='Cosine decay steps (0 disables).')
+    parser.add_argument('--lr-warmup-steps', type=int, default=0, help='Linear warmup steps.')
+    parser.add_argument('--lr-min-ratio', type=float, default=0.1, help='Minimum LR ratio for cosine decay.')
+    parser.add_argument('--clip-norm', type=float, default=0.0, help='Global grad norm clip (0 disables).')
     parser.add_argument('--shard-sample', type=int, default=None, help='Number of shard files to sample per buffer load.')
     args = vars(parser.parse_args())
 
@@ -400,6 +407,16 @@ if __name__ == '__main__':
         hyperparameters['pos_weight'] = args['pos_weight']
     elif matrix_size == 4:
         hyperparameters['pos_weight'] = 1.0
+    if args['use_focal']:
+        hyperparameters['use_focal'] = True
+        hyperparameters['focal_gamma'] = args['focal_gamma']
+        hyperparameters['focal_alpha'] = args['focal_alpha']
+    if args['lr_decay_steps'] and args['lr_decay_steps'] > 0:
+        hyperparameters['lr_decay_steps'] = args['lr_decay_steps']
+        hyperparameters['lr_warmup_steps'] = args['lr_warmup_steps']
+        hyperparameters['lr_min_ratio'] = args['lr_min_ratio']
+    if args['clip_norm'] and args['clip_norm'] > 0:
+        hyperparameters['clip_norm'] = args['clip_norm']
 
     #start the training
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,

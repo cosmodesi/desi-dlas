@@ -79,7 +79,10 @@ Reference: `Run_DLAfinder/README-training.md`
      --split 0.1 \
      --learning-rate 5e-5 \
      --pos-weight 1.0 \
-     --training-iters 800000
+     --training-iters 800000 \
+     --use-focal --focal-gamma 2.0 --focal-alpha 0.25 \
+     --lr-decay-steps 800000 --lr-warmup-steps 20000 --lr-min-ratio 0.1 \
+     --clip-norm 5.0
    ```
 
    Example (low2):
@@ -147,12 +150,15 @@ Architecture details (defaults from `parameterset.py`):
 
 Losses:
 - Classifier: weighted sigmoid cross-entropy (`pos_weight` supported)
+- Optional: focal loss (`--use-focal`, `--focal-gamma`, `--focal-alpha`)
 - Offset regression: masked MSE (computed on positive samples only)
 - Coldensity regression: masked weighted MSE (positive samples only)
 - L2 regularization on conv + FC layers
 
 Optimizer:
 - Adam (`tf.compat.v1.train.AdamOptimizer`)
+- Optional: cosine LR decay + warmup (`--lr-decay-steps`, `--lr-warmup-steps`)
+- Optional: gradient clipping (`--clip-norm`)
 
 Training loop details:
 - `training_iters`: 100000 by default.
