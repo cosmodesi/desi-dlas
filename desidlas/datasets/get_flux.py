@@ -1,3 +1,4 @@
+import os
 import scipy.signal as signal
 import numpy as np
 from desidlas.parameters import kernel
@@ -14,10 +15,21 @@ except ImportError:
 
 def smooth_flux(flux):
     """自动选择GPU或CPU版本"""
-    if HAS_GPU and flux.shape[0] > 100:  # 只在数据量大时用GPU
+    if _gpu_available() and flux.shape[0] > 100:  # 只在数据量大时用GPU
         return smooth_flux_gpu(flux)
     else:
         return smooth_flux_cpu(flux)
+
+
+def _gpu_available():
+    if not HAS_GPU:
+        return False
+    if os.environ.get("DESIDLAS_FORCE_CPU") == "1":
+        return False
+    try:
+        return cp.cuda.runtime.getDeviceCount() > 0
+    except Exception:
+        return False
 
 
 def smooth_flux_gpu(flux):
