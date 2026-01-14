@@ -30,17 +30,17 @@ from desidlas.training.model import build_model
 MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 4}
 INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 600}
 CKPT = {
-    'high': os.environ.get(
-        'DESIDLAS_CKPT_HIGH',
-        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
+    'low1': os.environ.get(
+        'DESIDLAS_CKPT_LOW1',
+        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+    ),
+    'low2': os.environ.get(
+        'DESIDLAS_CKPT_LOW2',
+        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
     ),
     'mid': os.environ.get(
         'DESIDLAS_CKPT_MID',
         '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
-    ),
-    'low': os.environ.get(
-        'DESIDLAS_CKPT_LOW',
-        '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
     ),
 }
 
@@ -211,20 +211,32 @@ def pred_file_fast(npy_path, savefile):
     lines = arr.ravel()
     print(f"[FAST] Loaded {len(lines)} sightlines", flush=True)
 
-    idx_low, idx_mid = [], []
+    idx_low1, idx_low2, idx_mid = [], [], []
     for i, sight in enumerate(lines):
         if sight == []:
             continue
-        (idx_low if getattr(sight, 's2n', 0) < 3 else idx_mid).append(i)
+        s2n = getattr(sight, 's2n', 0)
+        if s2n < 1.5:
+            idx_low1.append(i)
+        elif s2n < 3:
+            idx_low2.append(i)
+        else:
+            idx_mid.append(i)
     
-    print(f"[FAST] Groups: low={len(idx_low)}, mid={len(idx_mid)}", flush=True)
+    print(f"[FAST] Groups: low1={len(idx_low1)}, low2={len(idx_low2)}, mid={len(idx_mid)}", flush=True)
 
     # 流式批处理
     out_map = {}
-    if idx_low:
+    if idx_low1:
         out_map.update(_infer_bucket_stream(
-            lines, idx_low, 'low',
-            INPUT_SIZE['low'], MATRIX_SIZE['low'], CKPT['low'],
+            lines, idx_low1, 'low1',
+            INPUT_SIZE['low'], MATRIX_SIZE['low'], CKPT['low1'],
+            batch_size=16384
+        ))
+    if idx_low2:
+        out_map.update(_infer_bucket_stream(
+            lines, idx_low2, 'low2',
+            INPUT_SIZE['low'], MATRIX_SIZE['low'], CKPT['low2'],
             batch_size=16384
         ))
     if idx_mid:
