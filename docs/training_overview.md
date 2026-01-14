@@ -34,11 +34,14 @@ Reference: `Run_DLAfinder/README-training.md`
      --workers 32
    ```
 
-2) Build training shards (mid + low)
-   - Splits by S/N: `s2n < 3` → low, otherwise mid.
-   - Low drops very low S/N by default (`--low-min-s2n 1.0`).
-   - Low uses smoothed fluxes (4-channel), mid uses raw flux.
-   - Output shards saved under `/shards/mid` and `/shards/low`.
+2) Build training shards (mid + two low buckets)
+   - Splits by S/N:
+     - `s2n < 1.5` → low1
+     - `1.5 <= s2n < 3` → low2
+     - `s2n >= 3` → mid
+   - Drop very low S/N by default (`--low-min-s2n 1.0`).
+   - Low buckets use smoothed fluxes (4-channel), mid uses raw flux.
+   - Output shards saved under `/shards/mid`, `/shards/low1`, `/shards/low2`.
 
    Example:
    ```bash
@@ -46,7 +49,7 @@ Reference: `Run_DLAfinder/README-training.md`
      --sightline-root /pscratch/sd/t/<user>/retraining/sightlines \
      --out-root /pscratch/sd/t/<user>/retraining/shards \
      --chunk-size 200 --workers 32 \
-     --low-min-s2n 1.0 --low-pos-sample-percent 0.2
+     --low-min-s2n 1.0 --low-mid-s2n 1.5 --low-pos-sample-percent 0.2
    ```
 
 3) Train mid or low
@@ -65,12 +68,25 @@ Reference: `Run_DLAfinder/README-training.md`
      --split 0.1
    ```
 
-   Example (low):
+   Example (low1):
    ```bash
    python3 desidlas/training/training.py \
-     -r "/pscratch/sd/t/<user>/retraining/shards/low/*_*.npy" \
-     -e "/pscratch/sd/t/<user>/retraining/shards/low/*_*.npy" \
-     -c /pscratch/sd/t/<user>/retraining/models/low/current \
+     -r "/pscratch/sd/t/<user>/retraining/shards/low1/*_*.npy" \
+     -e "/pscratch/sd/t/<user>/retraining/shards/low1/*_*.npy" \
+     -c /pscratch/sd/t/<user>/retraining/models/low1/current \
+     -t 600 -m 4 \
+     --split 0.1 \
+     --learning-rate 5e-5 \
+     --pos-weight 1.0 \
+     --training-iters 800000
+   ```
+
+   Example (low2):
+   ```bash
+   python3 desidlas/training/training.py \
+     -r "/pscratch/sd/t/<user>/retraining/shards/low2/*_*.npy" \
+     -e "/pscratch/sd/t/<user>/retraining/shards/low2/*_*.npy" \
+     -c /pscratch/sd/t/<user>/retraining/models/low2/current \
      -t 600 -m 4 \
      --split 0.1 \
      --learning-rate 5e-5 \

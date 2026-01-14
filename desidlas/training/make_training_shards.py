@@ -69,7 +69,9 @@ def parse_args():
     parser.add_argument("--out-root", default=OUT_ROOT)
     parser.add_argument("--chunk-size", type=int, default=CHUNK_SIZE)
     parser.add_argument("--low-min-s2n", type=float, default=1.0,
-                        help="Drop low-SNR sightlines below this threshold.")
+                        help="Drop sightlines below this S/N threshold.")
+    parser.add_argument("--low-mid-s2n", type=float, default=1.5,
+                        help="Split low buckets at this S/N.")
     parser.add_argument("--low-pos-sample-percent", type=float, default=0.2,
                         help="Positive label width for low SNR as fraction of kernel.")
     parser.add_argument("--k-start", type=int, default=None, help="Start k (inclusive).")
@@ -102,11 +104,12 @@ def _prune_empty_shards(prefix):
 
 
 def _process_file(args):
-    f, out_root, chunk_size, low_min_s2n, low_pos_sample_percent = args
+    f, out_root, chunk_size, low_min_s2n, low_pos_sample_percent, low_mid_s2n = args
     sightlines = np.load(f, allow_pickle=True)
 
     mid = []
-    low = []
+    low1 = []
+    low2 = []
     for s in sightlines:
         if s == []:
             continue
@@ -114,8 +117,10 @@ def _process_file(args):
             s.s2n = preprocess.estimate_s2n(s)
         if s.s2n < low_min_s2n:
             continue
-        if s.s2n < 3:
-            low.append(s)
+        if s.s2n < low_mid_s2n:
+            low1.append(s)
+        elif s.s2n < 3:
+            low2.append(s)
         else:
             mid.append(s)
 
@@ -124,10 +129,19 @@ def _process_file(args):
         out_prefix = os.path.join(out_root, "mid", base)
         make_datasets(mid, output=out_prefix, validate=False, chunk_size=chunk_size)
         _prune_empty_shards(out_prefix)
-    if low:
-        out_prefix = os.path.join(out_root, "low", base)
+    if low1:
+        out_prefix = os.path.join(out_root, "low1", base)
         make_smoothdatasets_chunked(
-            low,
+            low1,
+            output=out_prefix,
+            chunk_size=chunk_size,
+            pos_sample_kernel_percent=low_pos_sample_percent,
+        )
+        _prune_empty_shards(out_prefix)
+    if low2:
+        out_prefix = os.path.join(out_root, "low2", base)
+        make_smoothdatasets_chunked(
+            low2,
             output=out_prefix,
             chunk_size=chunk_size,
             pos_sample_kernel_percent=low_pos_sample_percent,
@@ -139,7 +153,8 @@ def main():
     args = parse_args()
     os.makedirs(args.out_root, exist_ok=True)
     os.makedirs(os.path.join(args.out_root, "mid"), exist_ok=True)
-    os.makedirs(os.path.join(args.out_root, "low"), exist_ok=True)
+    os.makedirs(os.path.join(args.out_root, "low1"), exist_ok=True)
+    os.makedirs(os.path.join(args.out_root, "low2"), exist_ok=True)
 
     sightline_root = args.sightline_root
     k_dirs = _select_k_dirs(sightline_root, args.k_start, args.k_end)
@@ -149,7 +164,7 @@ def main():
         files.extend(glob.glob(os.path.join(k_dir, "*", "sightlines-*.npy")))
 
     tasks = [
-        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.low_pos_sample_percent)
+        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.low_pos_sample_percent, args.low_mid_s2n)
         for f in sorted(files)
     ]
     if args.workers <= 1:
