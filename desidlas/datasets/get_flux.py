@@ -1,8 +1,8 @@
 import os
 import scipy.signal as signal
 import numpy as np
-from desidlas.parameters import kernel
-from .input_set import split_sightline_into_samples
+from desidlas.dla_cnn import defs
+from desidlas.datasets.datasetting import split_sightline_into_samples
 
 # 尝试导入CuPy
 try:
@@ -42,7 +42,7 @@ def smooth_flux_gpu(flux):
     smooth7 = cp_signal.medfilt(flux_gpu, [1, 7])
     smooth15 = cp_signal.medfilt(flux_gpu, [1, 15])
     
-    # 堆叠: (n_windows, 4, 400)
+    # 堆叠: (n_windows, 4, L)
     flux_matrix = cp.stack([flux_gpu, smooth3, smooth7, smooth15], axis=1)
     
     # 转回CPU
@@ -63,10 +63,20 @@ def smooth_flux_cpu(flux):
 def make_dataset(sightline):
     """保持接口不变"""
     if sightline.s2n > 3:
-        data_split = split_sightline_into_samples(sightline, kernel=kernel['highsnr'])
+        data_split = split_sightline_into_samples(
+            sightline,
+            REST_RANGE=defs.REST_RANGE,
+            kernel=defs.kernel,
+            v=defs.best_v['all'],
+        )
         flux = np.vstack([data_split[0]])
     else:
-        data_split = split_sightline_into_samples(sightline, kernel=kernel['lowsnr'])
+        data_split = split_sightline_into_samples(
+            sightline,
+            REST_RANGE=defs.REST_RANGE,
+            kernel=defs.smooth_kernel,
+            v=defs.best_v['all'],
+        )
         flux = np.vstack([data_split[0]])
         flux = smooth_flux(flux)  # 自动选择GPU或CPU
     
