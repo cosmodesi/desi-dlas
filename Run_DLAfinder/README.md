@@ -79,6 +79,27 @@ Optional:
 - `--scratch-out` to write predictions/catalogs to a separate location
 - `--batch-size` and `--max-windows` for GPU tuning (defaults: 512 / 16384)
 
+### CPU Sightline Generation (Fast, GPU-Free)
+
+Use the dedicated CPU-only helper to generate sightlines without touching GPUs:
+
+```bash
+module load python
+conda activate /global/cfs/cdirs/desi/users/tingtan/conda_envs/CNN_GPU
+
+python3 desi_DLAfinder_make_sightlines_cpu.py \
+  --data-type mock \
+  --spectra-root <mock_spectra_root> \
+  --sightline-root <sightline_output_root> \
+  --list-cache-root <list_cache_root> \
+  --release <release_name> \
+  --workers 64
+```
+
+Notes:
+- Uses the same file-list cache naming as the unified runner, so you can reuse `--list-cache-root`.
+- Set `--force-sightlines` to overwrite existing sightlines.
+
 ## Use Retrained Models (Optional)
 
 By default, prediction uses the legacy checkpoints. To switch to retrained models,
