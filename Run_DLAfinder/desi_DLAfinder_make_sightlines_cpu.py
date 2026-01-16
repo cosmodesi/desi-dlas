@@ -18,6 +18,8 @@ def parse_args(options=None):
                         help="Root directory to store sightlines.")
     parser.add_argument("--list-cache-root", type=str, required=True,
                         help="Directory for cached file lists.")
+    parser.add_argument("--scratch-out", type=str, default=None,
+                        help="Optional output root for predictions/catalogs (cache helper).")
     parser.add_argument("--release", type=str, default="",
                         help="Release label (used for list cache name).")
     parser.add_argument("--survey", type=str, default="",
