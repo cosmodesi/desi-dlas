@@ -14,5 +14,7 @@ pos_sample_kernel_percent=0.3#60*2/400
 smooth_model='highsnr'#'lowsnr'
 camera='all'#'b','r','z'
 continuum_model=False
-PEAK_THRESH=0.2
-level=0.5
+import os
+
+PEAK_THRESH = float(os.environ.get("DESIDLAS_PEAK_THRESH", 0.2))
+level = float(os.environ.get("DESIDLAS_LEVEL", 0.5))
