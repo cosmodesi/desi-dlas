@@ -10,59 +10,12 @@ if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
 from desidlas.datasets import preprocess
-from desidlas.datasets.get_dataset import make_datasets, smooth_flux
-from desidlas.datasets.datasetting import split_sightline_into_samples, select_samples_pos_neg_ratio
-from desidlas.dla_cnn import defs
+from desidlas.datasets.get_dataset import make_datasets
 
 
 SIGHTLINE_GLOB = "/pscratch/sd/t/tanting/retraining/sightlines/**/*.npy"
 OUT_ROOT = "/pscratch/sd/t/tanting/retraining/shards"
 CHUNK_SIZE = 50
-
-
-def make_smoothdatasets_chunked(sightlines, output, chunk_size=CHUNK_SIZE, pos_sample_kernel_percent=0.2, pos_fraction=0.25):
-    dataset = {}
-    count = 0
-    file_idx = 0
-    for sightline in sightlines:
-        if sightline == []:
-            continue
-        preprocess.label_sightline(
-            sightline,
-            kernel=defs.smooth_kernel,
-            REST_RANGE=defs.REST_RANGE,
-            pos_sample_kernel_percent=pos_sample_kernel_percent,
-        )
-        data_split = split_sightline_into_samples(
-            sightline, REST_RANGE=defs.REST_RANGE, kernel=defs.smooth_kernel, v=defs.best_v['all']
-        )
-        sample_masks = select_samples_pos_neg_ratio(
-            sightline, kernel=defs.smooth_kernel, pos_fraction=pos_fraction
-        )
-        if len(sample_masks) > 0:
-            flux = np.vstack([data_split[0][m] for m in sample_masks])
-            labels_classifier = np.hstack([data_split[1][m] for m in sample_masks])
-            labels_offset = np.hstack([data_split[2][m] for m in sample_masks])
-            col_density = np.hstack([data_split[3][m] for m in sample_masks])
-            flux_matrix = smooth_flux(flux)
-            dataset[sightline.id] = {
-                'FLUX': flux_matrix,
-                'labels_classifier': labels_classifier,
-                'labels_offset': labels_offset,
-                'col_density': col_density
-            }
-
-        count += 1
-        if count >= chunk_size:
-            outpath = "{}_{}.npy".format(output, file_idx)
-            np.save(outpath, dataset)
-            dataset = {}
-            count = 0
-            file_idx += 1
-
-    if dataset:
-        outpath = "{}_{}.npy".format(output, file_idx)
-        np.save(outpath, dataset)
 
 
 def parse_args():
@@ -78,8 +31,10 @@ def parse_args():
                         help="Positive fraction for low buckets.")
     parser.add_argument("--mid-pos-frac", type=float, default=0.5,
                         help="Positive fraction for mid bucket.")
-    parser.add_argument("--low-pos-sample-percent", type=float, default=0.2,
-                        help="Positive label width for low SNR as fraction of kernel.")
+    parser.add_argument("--pos-sample-kernel-percent", type=float, default=0.3,
+                        help="Positive label width as fraction of kernel (all buckets).")
+    parser.add_argument("--low-pos-sample-percent", type=float, default=None,
+                        help="Deprecated alias for --pos-sample-kernel-percent.")
     parser.add_argument("--k-start", type=int, default=None, help="Start k (inclusive).")
     parser.add_argument("--k-end", type=int, default=None, help="End k (exclusive).")
     parser.add_argument("--workers", type=int, default=max(1, cpu_count()))
@@ -110,7 +65,7 @@ def _prune_empty_shards(prefix):
 
 
 def _process_file(args):
-    f, out_root, chunk_size, low_min_s2n, low_pos_sample_percent, low_mid_s2n, low_pos_frac, mid_pos_frac = args
+    f, out_root, chunk_size, low_min_s2n, pos_sample_kernel_percent, low_mid_s2n, low_pos_frac, mid_pos_frac = args
     sightlines = np.load(f, allow_pickle=True)
 
     mid = []
@@ -139,32 +94,35 @@ def _process_file(args):
             validate=False,
             chunk_size=chunk_size,
             pos_fraction=mid_pos_frac,
+            pos_sample_kernel_percent=pos_sample_kernel_percent,
         )
         _prune_empty_shards(out_prefix)
     if low1:
         out_prefix = os.path.join(out_root, "low1", base)
-        make_smoothdatasets_chunked(
+        make_datasets(
             low1,
             output=out_prefix,
             chunk_size=chunk_size,
-            pos_sample_kernel_percent=low_pos_sample_percent,
             pos_fraction=low_pos_frac,
+            pos_sample_kernel_percent=pos_sample_kernel_percent,
         )
         _prune_empty_shards(out_prefix)
     if low2:
         out_prefix = os.path.join(out_root, "low2", base)
-        make_smoothdatasets_chunked(
+        make_datasets(
             low2,
             output=out_prefix,
             chunk_size=chunk_size,
-            pos_sample_kernel_percent=low_pos_sample_percent,
             pos_fraction=low_pos_frac,
+            pos_sample_kernel_percent=pos_sample_kernel_percent,
         )
         _prune_empty_shards(out_prefix)
 
 
 def main():
     args = parse_args()
+    if args.low_pos_sample_percent is not None:
+        args.pos_sample_kernel_percent = args.low_pos_sample_percent
     os.makedirs(args.out_root, exist_ok=True)
     os.makedirs(os.path.join(args.out_root, "mid"), exist_ok=True)
     os.makedirs(os.path.join(args.out_root, "low1"), exist_ok=True)
@@ -178,7 +136,7 @@ def main():
         files.extend(glob.glob(os.path.join(k_dir, "*", "sightlines-*.npy")))
 
     tasks = [
-        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.low_pos_sample_percent,
+        (f, args.out_root, args.chunk_size, args.low_min_s2n, args.pos_sample_kernel_percent,
          args.low_mid_s2n, args.low_pos_frac, args.mid_pos_frac)
         for f in sorted(files)
     ]

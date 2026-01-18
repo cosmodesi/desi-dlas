@@ -3,7 +3,7 @@
 # Need to fill in TBD with the correct value
 #REST_RANGE = [920, 1214, "TBD"]
 REST_RANGE = [900, 1346, "TBD"]
-kernel = {'highsnr':400,'lowsnr':600} # SDSS value -- UPDATE!!
+kernel = {'highsnr':400,'lowsnr':400} # unified kernel size for all buckets
 best_v = {'b': 62996, 'r': 44859, 'z': 34720,'all': 44735}#the best value of rebining for each channel, its unit is m*s^(-1).
 norm_range=[1420,1480]#for normalization and estimate s2n
 #for NHI measurements bias adjustment

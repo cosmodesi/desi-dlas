@@ -102,7 +102,7 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
     #Parameters
     #----------
     #hyperparameters:hyperparameters for the CNN model structure
-    #flux:list (400 or 600 length), flux from sightline
+    #flux:list (400 length), flux from sightline
     #checkpoint_filename: CNN model file used to detect DLAs
     #TF_DEVICE: use which gpu to train, default is '/gpu:1'
 
@@ -177,15 +177,36 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
     #sightline=np.load(pred_sightlines,allow_pickle = True,encoding='latin1').ravel()
     
     #parameters
-    matrix_size={'high':1,'mid':1,'low':4}
-    INPUT_SIZE={'high':400,'mid':400,'low':600}
+    matrix_size={'high':1,'mid':1,'low1':1,'low2':1}
+    INPUT_SIZE={'high':400,'mid':400,'low1':400,'low2':400}
 
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'}
+    checkpoint_filename={
+        'high': os.environ.get(
+            'DESIDLAS_CKPT_HIGH',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
+        ),
+        'mid': os.environ.get(
+            'DESIDLAS_CKPT_MID',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
+        ),
+        'low1': os.environ.get(
+            'DESIDLAS_CKPT_LOW1',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+        ),
+        'low2': os.environ.get(
+            'DESIDLAS_CKPT_LOW2',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+        ),
+    }
     hyperparameters = {}
     if sightline != []:
         flux,lam=make_dataset(sightline)
-        if sightline.s2n<3:
-            model='low'
+        if sightline.s2n<1.5:
+            model='low1'
+            for k in range(0,len(parameter_names)):
+                hyperparameters[parameter_names[k]] = parameters[k][0]
+        elif sightline.s2n<3:
+            model='low2'
             for k in range(0,len(parameter_names)):
                 hyperparameters[parameter_names[k]] = parameters[k][0]
         else:#s2n>3 use mid model
@@ -200,29 +221,45 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
 def pred_file_fast(npy_path, savefile):
     """
     快速处理一个 sightline 文件（.npy）：
-      - 分组（mid/low）
+      - 分组（low1/low2/mid）
       - 把每组所有窗口拼成大矩阵，批量推理
       - 拆回每条 sightline，写成你原有的 results 结构
     """
     # 与原逻辑一致的参数
-    matrix_size = {'high':1, 'mid':1, 'low':4}
-    INPUT_SIZE  = {'high':400,'mid':400,'low':600}
+    matrix_size = {'high':1, 'mid':1, 'low1':1, 'low2':1}
+    INPUT_SIZE  = {'high':400,'mid':400,'low1':400,'low2':400}
     ckpt = {
-        'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
-        'mid' :' /global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999'.strip(),
-        'low' :' /global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'.strip()
+        'high': os.environ.get(
+            'DESIDLAS_CKPT_HIGH',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
+        ),
+        'mid': os.environ.get(
+            'DESIDLAS_CKPT_MID',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
+        ),
+        'low1': os.environ.get(
+            'DESIDLAS_CKPT_LOW1',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+        ),
+        'low2': os.environ.get(
+            'DESIDLAS_CKPT_LOW2',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+        ),
     }
 
     arr = np.load(npy_path, allow_pickle=True, encoding='latin1')
     lines = arr.ravel()
 
     # 按 s2n 分组
-    idx_low, idx_mid = [], []
+    idx_low1, idx_low2, idx_mid = [], [], []
     for i, sight in enumerate(lines):
         if sight == []:  # 跳过空
             continue
-        if getattr(sight, 's2n', 0) < 3:
-            idx_low.append(i)
+        s2n = getattr(sight, 's2n', 0)
+        if s2n < 1.5:
+            idx_low1.append(i)
+        elif s2n < 3:
+            idx_low2.append(i)
         else:
             idx_mid.append(i)
 
@@ -241,18 +278,32 @@ def pred_file_fast(npy_path, savefile):
         big = np.vstack(flux_list)   # [sum Wi, L]
         return big, lam_list, sizes
 
-    # 低 SNR 组
-    big, lam_list, sizes = build_batch(idx_low, 'low')
+    # 低1 SNR 组
+    big, lam_list, sizes = build_batch(idx_low1, 'low1')
     if big is not None:
-        p, c, o, d = _infer_batch('low', INPUT_SIZE['low'], matrix_size['low'], ckpt['low'], big)
+        p, c, o, d = _infer_batch('low1', INPUT_SIZE['low1'], matrix_size['low1'], ckpt['low1'], big)
         # 拆回每条 sightline
         cursor = 0
-        for i, sz in zip(idx_low, sizes):
+        for i, sz in zip(idx_low1, sizes):
             sl = slice(cursor, cursor+sz)
             results[i] = {
                 'pred': p[sl], 'conf': c[sl],
                 'offset': o[sl], 'coldensity': d[sl],
                 'lam': lam_list[cursor - (cursor - cursor)]  # 用 lam_list 的同序元素
+            }
+            cursor += sz
+
+    # 低2 SNR 组
+    big, lam_list, sizes = build_batch(idx_low2, 'low2')
+    if big is not None:
+        p, c, o, d = _infer_batch('low2', INPUT_SIZE['low2'], matrix_size['low2'], ckpt['low2'], big)
+        cursor = 0
+        for i, sz in zip(idx_low2, sizes):
+            sl = slice(cursor, cursor+sz)
+            results[i] = {
+                'pred': p[sl], 'conf': c[sl],
+                'offset': o[sl], 'coldensity': d[sl],
+                'lam': lam_list[cursor - (cursor - cursor)]
             }
             cursor += sz
 

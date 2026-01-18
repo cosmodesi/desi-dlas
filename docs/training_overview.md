@@ -40,7 +40,7 @@ Reference: `Run_DLAfinder/README-training.md`
      - `1.5 <= s2n < 3` → low2
      - `s2n >= 3` → mid
    - Drop very low S/N by default (`--low-min-s2n 1.0`).
-   - Low buckets use smoothed fluxes (4-channel), mid uses raw flux.
+   - All buckets use raw flux (1-channel); low1/low2/mid share the same preprocessing.
    - Output shards saved under `/shards/mid`, `/shards/low1`, `/shards/low2`.
 
    Example:
@@ -50,12 +50,12 @@ Reference: `Run_DLAfinder/README-training.md`
      --out-root /pscratch/sd/t/<user>/retraining/shards \
      --chunk-size 200 --workers 32 \
      --low-min-s2n 1.0 --low-mid-s2n 1.5 \
-     --low-pos-sample-percent 0.2 --low-pos-frac 0.25 --mid-pos-frac 0.5
+     --pos-sample-kernel-percent 0.3 --low-pos-frac 0.25 --mid-pos-frac 0.5
    ```
 
 3) Train mid or low
    - Mid: `INPUT_SIZE=400, matrix_size=1`
-   - Low: `INPUT_SIZE=600, matrix_size=4`
+   - Low1/Low2: `INPUT_SIZE=400, matrix_size=1`
    - Supports `--split` to create a validation split from the training glob.
    - Supports overrides for `--learning-rate`, `--pos-weight`, and `--training-iters`.
 
@@ -75,14 +75,8 @@ Reference: `Run_DLAfinder/README-training.md`
      -r "/pscratch/sd/t/<user>/retraining/shards/low1/*_*.npy" \
      -e "/pscratch/sd/t/<user>/retraining/shards/low1/*_*.npy" \
      -c /pscratch/sd/t/<user>/retraining/models/low1/current \
-     -t 600 -m 4 \
-     --split 0.1 \
-     --learning-rate 5e-5 \
-     --pos-weight 1.0 \
-     --training-iters 800000 \
-     --use-focal --focal-gamma 2.0 --focal-alpha 0.25 \
-     --lr-decay-steps 800000 --lr-warmup-steps 20000 --lr-min-ratio 0.1 \
-     --clip-norm 5.0
+     -t 400 -m 1 \
+     --split 0.1
    ```
 
    Example (low2):
@@ -91,11 +85,8 @@ Reference: `Run_DLAfinder/README-training.md`
      -r "/pscratch/sd/t/<user>/retraining/shards/low2/*_*.npy" \
      -e "/pscratch/sd/t/<user>/retraining/shards/low2/*_*.npy" \
      -c /pscratch/sd/t/<user>/retraining/models/low2/current \
-     -t 600 -m 4 \
-     --split 0.1 \
-     --learning-rate 5e-5 \
-     --pos-weight 1.0 \
-     --training-iters 800000
+     -t 400 -m 1 \
+     --split 0.1
    ```
 
 4) Resume training from checkpoint
@@ -105,11 +96,11 @@ Reference: `Run_DLAfinder/README-training.md`
    Example:
    ```bash
    python3 desidlas/training/training.py \
-     -r "/pscratch/sd/t/<user>/retraining/shards/low/*_*.npy" \
-     -e "/pscratch/sd/t/<user>/retraining/shards/low/*_*.npy" \
-     -c /pscratch/sd/t/<user>/retraining/models/low/current \
-     -l /pscratch/sd/t/<user>/retraining/models/low/current_40000 \
-     -t 600 -m 4
+     -r "/pscratch/sd/t/<user>/retraining/shards/low1/*_*.npy" \
+     -e "/pscratch/sd/t/<user>/retraining/shards/low1/*_*.npy" \
+     -c /pscratch/sd/t/<user>/retraining/models/low1/current \
+     -l /pscratch/sd/t/<user>/retraining/models/low1/current_40000 \
+     -t 400 -m 1
    ```
 
 ## Model Architecture (CNN)
@@ -118,11 +109,10 @@ Source: `desidlas/training/model.py`
 
 Input:
 - Mid: shape `[batch, 400]` → reshaped to `[batch, 400, 1, 1]`
-- Low: shape `[batch, 4, 600]` → reshaped to `[batch, 600, 1, 4]`
+- Low: shape `[batch, 400]` → reshaped to `[batch, 400, 1, 1]`
 
 Low input handling detail:
-- Low shards are stored channel-first (`[batch, 4, 600]`).
-- Training transposes to `[batch, 600, 4]` before reshaping to NHWC.
+- Low shards use the same 2D flux format as mid (`[batch, 400]`).
 
 Network:
 - 3 convolution layers (1D implemented as 2D conv with width=1)
@@ -181,8 +171,8 @@ Default values are taken from `parameters[k][0]`. Overrides supported in
 - `--learning-rate` (float)
 - `--pos-weight` (float)
 
-Low-SNR defaults (added in training runner):
-- learning rate capped at `<= 5e-5` if `matrix_size==4`
+Legacy smoothing defaults (only when `matrix_size==4`):
+- learning rate capped at `<= 5e-5`
 - `pos_weight=1.0` if not specified
 
 Key default values (from `parameters[k][0]`):
@@ -229,8 +219,8 @@ Source files:
 
 Constants:
 - `REST_RANGE = [900, 1346, 1748]`
-- `kernel = 400` (mid/high)
-- `smooth_kernel = 600` (low)
+- `kernel = 400` (all buckets)
+- `smooth_kernel = 600` (legacy smoothing)
 - `best_v['all'] = 44735` m/s (rebin velocity)
 
 Labeling (`label_sightline`):
@@ -257,11 +247,10 @@ Shard format (training):
 - Each shard is a dict keyed by `sightline.id`.
 - Each entry contains:
   - `FLUX`: array of windows
-    - mid: `[n_samples, 400]`
-    - low: `[n_samples, 4, 600]` (raw + 3 medians)
+    - mid/low1/low2: `[n_samples, 400]`
   - `labels_classifier`, `labels_offset`, `col_density`
 
-Low-SNR smoothing (`smooth_flux`):
+Low-SNR smoothing (`smooth_flux`, legacy):
 - For each window, compute median filters with widths 3, 7, 15.
 - Stack as `[raw, smooth3, smooth7, smooth15]`.
 
@@ -277,7 +266,7 @@ Common levers an algorithm reviewer may want to test:
 - **Loss weighting**: `pos_weight` or separate weights for offset/coldensity.
 - **Learning rate schedule**: fixed LR only; try cosine/step decay or warmup.
 - **Regularization**: L2 and dropout are static; explore larger dropout for low.
-- **Kernel/window size**: kernel=400/600; evaluate longer windows for low S/N.
+- **Kernel/window size**: kernel=400; evaluate longer windows for low S/N.
 - **Architecture**: 3-layer conv trunk with 3 heads; consider deeper trunk
   or shared attention over windows.
 ## Prediction Model Selection (Runtime)
@@ -285,7 +274,8 @@ Common levers an algorithm reviewer may want to test:
 By default, prediction uses the legacy checkpoints. You can override at runtime:
 
 ```bash
-export DESIDLAS_CKPT_LOW=/pscratch/sd/t/<user>/retraining/models/low/current_135000
+export DESIDLAS_CKPT_LOW1=/pscratch/sd/t/<user>/retraining/models/low1/current_135000
+export DESIDLAS_CKPT_LOW2=/pscratch/sd/t/<user>/retraining/models/low2/current_135000
 export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
 ```
 

@@ -59,23 +59,13 @@ def smooth_flux_cpu(flux):
 
 def make_dataset(sightline):
     """保持接口不变"""
-    if sightline.s2n > 3:
-        data_split = split_sightline_into_samples(
-            sightline,
-            REST_RANGE=defs.REST_RANGE,
-            kernel=defs.kernel,
-            v=defs.best_v['all'],
-        )
-        flux = np.vstack([data_split[0]])
-    else:
-        data_split = split_sightline_into_samples(
-            sightline,
-            REST_RANGE=defs.REST_RANGE,
-            kernel=defs.smooth_kernel,
-            v=defs.best_v['all'],
-        )
-        flux = np.vstack([data_split[0]])
-        flux = smooth_flux(flux)  # 自动选择GPU或CPU
+    data_split = split_sightline_into_samples(
+        sightline,
+        REST_RANGE=defs.REST_RANGE,
+        kernel=defs.kernel,
+        v=defs.best_v['all'],
+    )
+    flux = np.vstack([data_split[0]])
     
     input_lam = np.vstack([data_split[5]])
     

@@ -27,8 +27,8 @@ from desidlas.training.parameterset import parameter_names, parameters
 from desidlas.training.model import build_model
 
 # ---- 模型常量(全局) ----
-MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 4}
-INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 600}
+MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 1}
+INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 400}
 CKPT = {
     'low1': os.environ.get(
         'DESIDLAS_CKPT_LOW1',
@@ -99,11 +99,11 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
     )
 
     L = INPUT_SIZE
-    C = matrix_size  # 通道数: low=4, mid/high=1
+    C = matrix_size  # 通道数: low/mid/high=1 (raw flux)
     
     # 根据matrix_size决定缓冲区形状
     if C > 1:
-        buf = np.empty((batch_size, C, L), dtype=np.float32)  # 3D: [batch, 4, 600]
+        buf = np.empty((batch_size, C, L), dtype=np.float32)
     else:
         buf = np.empty((batch_size, L), dtype=np.float32)     # 2D: [batch, 400]
     

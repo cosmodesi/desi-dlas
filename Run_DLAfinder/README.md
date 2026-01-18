@@ -106,7 +106,8 @@ By default, prediction uses the legacy checkpoints. To switch to retrained model
 set environment variables before running:
 
 ```bash
-export DESIDLAS_CKPT_LOW=/pscratch/sd/t/<user>/retraining/models/low/current_135000
+export DESIDLAS_CKPT_LOW1=/pscratch/sd/t/<user>/retraining/models/low1/current_135000
+export DESIDLAS_CKPT_LOW2=/pscratch/sd/t/<user>/retraining/models/low2/current_135000
 export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
 ```
 

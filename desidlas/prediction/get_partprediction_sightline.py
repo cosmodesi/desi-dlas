@@ -37,7 +37,7 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
     Parameters
     ----------
     hyperparameters:hyperparameters for the CNN model structure
-    flux:list (400 or 600 length), flux from sightline
+    flux:list (400 length), flux from sightline
     checkpoint_filename: CNN model file used to detect DLAs
     TF_DEVICE: use which gpu to train, default is '/gpu:1'
 
@@ -83,10 +83,27 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
 def predictions_desi(pred_sightlines,savefile):
 
     #parameters
-    matrix_size={'high':1,'mid':1,'low':4}
-    INPUT_SIZE={'high':400,'mid':400,'low':600}
+    matrix_size={'high':1,'mid':1,'low1':1,'low2':1}
+    INPUT_SIZE={'high':400,'mid':400,'low1':400,'low2':400}
 
-    checkpoint_filename={'high':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999','mid':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999','low':'/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999'}
+    checkpoint_filename={
+        'high': os.environ.get(
+            'DESIDLAS_CKPT_HIGH',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_highsnr/train_highsnr/current_99999',
+        ),
+        'mid': os.environ.get(
+            'DESIDLAS_CKPT_MID',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_midsnr/train_midsnr/current_99999',
+        ),
+        'low1': os.environ.get(
+            'DESIDLAS_CKPT_LOW1',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+        ),
+        'low2': os.environ.get(
+            'DESIDLAS_CKPT_LOW2',
+            '/global/cfs/cdirs/desi/users/jqzou/dla_finder/prediction/model/train_lowsnr/train_lowsnr/current_99999',
+        ),
+    }
     
 
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
@@ -117,8 +134,12 @@ def predictions_desi(pred_sightlines,savefile):
 
     for sightline in tqdm(r.ravel()):
         flux,lam=make_dataset(sightline)
-        if sightline.s2n<3:
-            model='low'
+        if sightline.s2n<1.5:
+            model='low1'
+            for k in range(0,len(parameter_names)):
+                hyperparameters[parameter_names[k]] = parameters[k][0]
+        elif sightline.s2n<3:
+            model='low2'
             for k in range(0,len(parameter_names)):
                 hyperparameters[parameter_names[k]] = parameters[k][0]
         else:#s2n>3 use mid model

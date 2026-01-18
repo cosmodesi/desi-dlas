@@ -26,7 +26,8 @@ export RUNNER=$REPO_ROOT/Run_DLAfinder/desi_DLAfinder_run.py
 export SCR_OUT=$SCRATCH/DLAfinder_out/y3_saclay
 
 # Optional: use retrained checkpoints (unset to use defaults)
-# export DESIDLAS_CKPT_LOW=/pscratch/sd/<user>/retraining/models/low/current_135000
+# export DESIDLAS_CKPT_LOW1=/pscratch/sd/<user>/retraining/models/low1/current_135000
+# export DESIDLAS_CKPT_LOW2=/pscratch/sd/<user>/retraining/models/low2/current_135000
 # export DESIDLAS_CKPT_MID=/pscratch/sd/<user>/retraining/models/mid/current_99999
 
 # ---- Configure dataset ----

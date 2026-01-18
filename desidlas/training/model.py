@@ -125,8 +125,8 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     Parameters
     ----------
     hyperparameters: use the hyperparameters in dla_cnn/models/model_gensample_v7.1_hyperparams.json
-    INPUT_SIZE: pixels numbers for each window , 400 for high SNR and 600 for low SNR
-    matrix_size: 1 if without smoothing, 4 if smoothing for low SNR
+    INPUT_SIZE: pixels per window, 400 for raw mid/low and 600 for legacy smoothing
+    matrix_size: 1 for raw flux, 4 for legacy smoothing
     
     Returns
     train_step_ABC: the minimized result for three loss functions

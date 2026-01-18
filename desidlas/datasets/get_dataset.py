@@ -9,7 +9,9 @@ kernel = defs.kernel
 smooth_kernel= defs.smooth_kernel
 best_v = defs.best_v
 
-def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['all'], output=None, validate=True, chunk_size=100, pos_fraction=0.5):
+def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['all'],
+                  output=None, validate=True, chunk_size=100, pos_fraction=0.5,
+                  pos_sample_kernel_percent=0.3):
     """
     Generate training set or validation set for DESI.
 
@@ -17,8 +19,8 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
     -----------------------------------------------
     sightlines: list of 'dla_cnn.data_model.Sightline' object, the sightlines should be preprocessed.
     validate: bool, optional, this decides whether to add wavelength in the dataset
-    validate: bool, optional, this decides whether to smooth the flux. In our paper, we smooth the flux for spectra with SNR<3
     chunk_size: int, optional, how many sightlines to save once
+    pos_sample_kernel_percent: float, optional, positive label width as fraction of kernel.
 
     Returns
     -----------------------------------------------
@@ -31,7 +33,12 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
     for sightline in sightlines:
         wavelength_dlas = [dla.central_wavelength for dla in sightline.dlas]
         coldensity_dlas = [dla.col_density for dla in sightline.dlas]   
-        label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE)
+        label_sightline(
+            sightline,
+            kernel=kernel,
+            REST_RANGE=REST_RANGE,
+            pos_sample_kernel_percent=pos_sample_kernel_percent,
+        )
         data_split = split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel, v=v)
         
         if validate:
