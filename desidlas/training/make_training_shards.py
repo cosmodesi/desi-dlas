@@ -102,6 +102,7 @@ def _process_file(args):
         make_datasets(
             low1,
             output=out_prefix,
+            validate=False,
             chunk_size=chunk_size,
             pos_fraction=low_pos_frac,
             pos_sample_kernel_percent=pos_sample_kernel_percent,
@@ -112,6 +113,7 @@ def _process_file(args):
         make_datasets(
             low2,
             output=out_prefix,
+            validate=False,
             chunk_size=chunk_size,
             pos_fraction=low_pos_frac,
             pos_sample_kernel_percent=pos_sample_kernel_percent,
