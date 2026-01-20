@@ -27,6 +27,8 @@ def parse_args():
                         help="Drop sightlines below this S/N threshold.")
     parser.add_argument("--low-mid-s2n", type=float, default=1.5,
                         help="Split low buckets at this S/N.")
+    parser.add_argument("--no-s2n-split", action="store_true",
+                        help="Do not split buckets by S/N; write a single shard set.")
     parser.add_argument("--low-pos-frac", type=float, default=0.25,
                         help="Positive fraction for low buckets.")
     parser.add_argument("--mid-pos-frac", type=float, default=0.5,
@@ -65,8 +67,34 @@ def _prune_empty_shards(prefix):
 
 
 def _process_file(args):
-    f, out_root, chunk_size, low_min_s2n, pos_sample_kernel_percent, low_mid_s2n, low_pos_frac, mid_pos_frac = args
+    (f, out_root, chunk_size, low_min_s2n, pos_sample_kernel_percent, low_mid_s2n,
+     low_pos_frac, mid_pos_frac, no_s2n_split) = args
     sightlines = np.load(f, allow_pickle=True)
+
+    if no_s2n_split:
+        all_sightlines = []
+        for s in sightlines:
+            if s == []:
+                continue
+            if not hasattr(s, "s2n") or s.s2n is None:
+                s.s2n = preprocess.estimate_s2n(s)
+            if s.s2n < low_min_s2n:
+                continue
+            all_sightlines.append(s)
+
+        if all_sightlines:
+            base = os.path.basename(f).replace(".npy", "")
+            out_prefix = os.path.join(out_root, base)
+            make_datasets(
+                all_sightlines,
+                output=out_prefix,
+                validate=False,
+                chunk_size=chunk_size,
+                pos_fraction=mid_pos_frac,
+                pos_sample_kernel_percent=pos_sample_kernel_percent,
+            )
+            _prune_empty_shards(out_prefix)
+        return
 
     mid = []
     low1 = []
@@ -126,9 +154,12 @@ def main():
     if args.low_pos_sample_percent is not None:
         args.pos_sample_kernel_percent = args.low_pos_sample_percent
     os.makedirs(args.out_root, exist_ok=True)
-    os.makedirs(os.path.join(args.out_root, "mid"), exist_ok=True)
-    os.makedirs(os.path.join(args.out_root, "low1"), exist_ok=True)
-    os.makedirs(os.path.join(args.out_root, "low2"), exist_ok=True)
+    if args.no_s2n_split:
+        pass
+    else:
+        os.makedirs(os.path.join(args.out_root, "mid"), exist_ok=True)
+        os.makedirs(os.path.join(args.out_root, "low1"), exist_ok=True)
+        os.makedirs(os.path.join(args.out_root, "low2"), exist_ok=True)
 
     sightline_root = args.sightline_root
     k_dirs = _select_k_dirs(sightline_root, args.k_start, args.k_end)
@@ -139,7 +170,7 @@ def main():
 
     tasks = [
         (f, args.out_root, args.chunk_size, args.low_min_s2n, args.pos_sample_kernel_percent,
-         args.low_mid_s2n, args.low_pos_frac, args.mid_pos_frac)
+         args.low_mid_s2n, args.low_pos_frac, args.mid_pos_frac, args.no_s2n_split)
         for f in sorted(files)
     ]
     if args.workers <= 1:
