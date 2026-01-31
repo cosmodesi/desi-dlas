@@ -91,7 +91,7 @@ def _default_patterns(data_type: str):
             "output_layout": "k/j",
             "spectra_pattern": "spectra-16-{id}.fits",
             "zbest_pattern": "zbest-16-{id}.fits",
-            "truth_pattern": "",
+            "truth_pattern": "truth-16-{id}.fits",
             "sightline_pattern": "sightlines-{id}.npy",
             "pred_pattern": "sightlines-pred_gpu-{id}.npy",
             "dlacat_pattern": "dlacat_gpu-{id}.fits",
