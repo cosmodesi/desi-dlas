@@ -63,9 +63,9 @@ def _build_task(item):
         return ("skip", sightline_path)
     os.makedirs(os.path.dirname(sightline_path), exist_ok=True)
     if data_type == "mock":
-        truth_arg = []
-    else:
         truth_arg = truth_path if truth_path and os.path.exists(truth_path) else []
+    else:
+        truth_arg = []
     zbest_arg = zbest_path if zbest_path and os.path.exists(zbest_path) else []
     try:
         from desidlas.datasets.get_sightlines import get_sightlines
