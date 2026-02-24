@@ -9,18 +9,41 @@ Single entrypoint for both mock and observational data. It handles:
 Main entrypoint:
 - `Run_DLAfinder/desi_DLAfinder_run.py`
 
-Submit template:
-- `Run_DLAfinder/submit_desi_DLAfinder_run.sh` (set `REPO_ROOT` to your local `desi-dlas` path)
+References:
+- training overview: `docs/training_overview.md`
+- retraining guide: `Run_DLAfinder/README-training.md`
 
-## Environment Setup (Perlmutter)
+## What The Runner Does
 
-Create a GPU environment (choose your own path):
+1. Builds or loads a cached file list (`filelist_<tag>.npz`).
+2. Generates sightlines if `--generate-sightlines` is set.
+3. Runs prediction and writes per-file catalogs.
+4. Optionally stacks per-file catalogs into one FITS.
+
+If you change data type or filename patterns, run once with `--rebuild-list`.
+
+## Preparations Before Running
+
+1. Clone repo and checkout the correct branch:
+
+```bash
+git clone https://github.com/cosmodesi/desi-dlas/
+cd desi-dlas
+git checkout main-unified
+```
+
+2. Create a GPU environment (choose your own path):
 
 ```bash
 module load python
 conda create -y -p /path/to/conda_envs/CNN_GPU python=3.10
-conda activate /path/to/conda_envs/CNN_GPU
+source activate /path/to/conda_envs/CNN_GPU
 pip install 'tensorflow[and-cuda]==2.15.*'
+```
+
+3. Install desi-dlas dependencies:
+
+```bash
 pip install -e /path/to/desi-dlas
 ```
 
@@ -45,25 +68,11 @@ Create (or confirm) these directories exist:
 - `--list-cache-root`
 - `--scratch-out` (if used)
 
-## Path Conventions
+## Running
 
-Mock (layout `k/j`):
-- spectra: `<spectra-root>/<k>/<j>/spectra-16-<j>.fits`
-- zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
-- sightlines: `<sightline-root>/<k>/<j>/sightlines-<j>.npy`
-- pred: `<scratch-out or sightline-root>/<k>/<j>/sightlines-pred_gpu-<j>.npy`
-- dlacat: `<scratch-out or sightline-root>/<k>/<j>/dlacat_gpu-<j>.fits`
+### Quick Start (Minimal Commands)
 
-Data (layout `k`):
-- spectra: `<spectra-root>/<k>/<j>/spectra-main-dark-<j>.fits.gz`
-- zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
-- sightlines: `<sightline-root>/<k>/<j>-pre-sightlines.npy`
-- pred: `<scratch-out or sightline-root>/<k>/<j>-pre-sightlines-pred.npy`
-- dlacat: `<scratch-out or sightline-root>/<k>/<j>-dlacat.fits`
-
-If your filenames differ, override with the `--*-pattern` flags.
-
-## Quick Start (Minimal Commands)
+This is for running only one sightline or a small subset.
 
 ### Mock (only three required paths)
 
@@ -86,41 +95,6 @@ Optional:
 - `--scratch-out` to write predictions/catalogs to a separate location
 - `--batch-size` and `--max-windows` for GPU tuning (defaults: 512 / 16384)
 
-### CPU Sightline Generation (Fast, GPU-Free)
-
-Use the dedicated CPU-only helper to generate sightlines without touching GPUs:
-
-```bash
-module load python
-conda activate /global/cfs/cdirs/desi/users/tingtan/conda_envs/CNN_GPU
-
-python3 Run_DLAfinder/desi_DLAfinder_make_sightlines_cpu.py \
-  --data-type mock \
-  --spectra-root <mock_spectra_root> \
-  --sightline-root <sightline_output_root> \
-  --list-cache-root <list_cache_root> \
-  --release <release_name> \
-  --workers 64
-```
-
-Notes:
-- Uses the same file-list cache naming as the unified runner, so you can reuse `--list-cache-root`.
-- Set `--force-sightlines` to overwrite existing sightlines.
-
-## Use Retrained Models (Optional)
-
-By default, prediction uses the legacy checkpoints. To switch to retrained models,
-set environment variables before running:
-
-```bash
-export DESIDLAS_CKPT_LOW1=/pscratch/sd/t/<user>/retraining/models/low1/current_135000
-export DESIDLAS_CKPT_LOW2=/pscratch/sd/t/<user>/retraining/models/low2/current_135000
-export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
-```
-
-Unset them to return to the default models. If you are not on NERSC, you will
-need to set these explicitly.
-
 ### Data (minimal + survey/program/version)
 
 ```bash
@@ -137,16 +111,111 @@ Optional:
 - `--scratch-out` to write predictions/catalogs to a separate location
 - `--batch-size` and `--max-windows` for GPU tuning (defaults: 512 / 16384)
 
-## What The Runner Does
+### Interactive Node Example (Mock, 4 GPUs)
 
-1) Builds or loads a cached file list (`filelist_<tag>.npz`).
-2) Generates sightlines if `--generate-sightlines` is set.
-3) Runs prediction and writes per-file catalogs.
-4) Optionally stacks per-file catalogs into one FITS.
+You can run in an interactive node or save this block as a `.sh` script.
 
-If you change data type or filename patterns, run once with `--rebuild-list`.
+```bash
+salloc -N 1 -C gpu -t 04:00:00 --gpus 4 --qos interactive --account desi_g
 
-## Stacking Catalogs
+module load python
+conda activate /global/cfs/cdirs/desi/users/tingtan/conda_envs/CNN_GPU
+
+export OMP_NUM_THREADS=4
+export MKL_NUM_THREADS=4
+export TF_CPP_MIN_LOG_LEVEL=2
+ulimit -n 65535
+
+export RUNNER=/global/u1/t/tanting/DESI_analysis/desi-dlas/Run_DLAfinder/desi_DLAfinder_run.py
+export SCR_OUT=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/mocks/y3_saclay
+
+# ---- Mock dataset ----
+DATA_TYPE=mock
+SPECTRA_ROOT=/global/cfs/cdirs/desicollab/mocks/lya_forest/develop/saclay/qq_desi_y3/v4.7.5/mock-0/juraLy8-124/spectra-16
+SIGHTLINE_ROOT=$SCR_OUT/sightlines
+LIST_CACHE_ROOT=$SCR_OUT/data
+DLACAT_ROOT=$SCR_OUT/dlacat
+export LIST_CACHE_ROOT=$SCR_OUT/data
+export DESIDLAS_CKPT_LOW1=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/low1/current_199999
+export DESIDLAS_CKPT_LOW2=//global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/low2/current_499999
+export DESIDLAS_CKPT_MID=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/mid/current_460000
+RELEASE=y3_saclay
+SURVEY=
+PROGRAM=
+VERSION=
+
+# ---- Prediction settings ----
+BATCH_SIZE=512
+MAX_WINDOWS=16384
+
+# ---- Work range ----
+BASE_START=0
+GPU_PER_NODE=4
+TOTAL=1127
+
+CHUNK=$(( (TOTAL + GPU_PER_NODE - 1) / GPU_PER_NODE ))
+export TOTAL CHUNK BASE_START GPU_PER_NODE
+
+echo "TOTAL=$TOTAL CHUNK=$CHUNK BASE_START=$BASE_START"
+
+srun --ntasks=${GPU_PER_NODE} --gpus-per-task=1 --cpus-per-task=4 \
+--gpu-bind=single:1 --cpu-bind=cores \
+--output="$SCR_OUT/log/dlaf_unified_%j_task%t.out" \
+--error="$SCR_OUT/log/dlaf_unified_%j_task%t.err" bash -lc '
+echo "[task $SLURM_LOCALID] CUDA_VISIBLE_DEVICES=$CUDA_VISIBLE_DEVICES"
+
+upper=$(( BASE_START + TOTAL ))
+
+start=$(( BASE_START + SLURM_LOCALID * CHUNK ))
+end=$(( start + CHUNK ))
+
+if [ $start -ge $upper ]; then
+  echo "[GPU $SLURM_LOCALID] start=$start 超出 upper=$upper, 跳过。"
+  exit 0
+fi
+if [ $end -gt $upper ]; then
+  end=$upper
+fi
+len=$(( end - start ))
+
+echo "[GPU $SLURM_LOCALID] 跑索引区间: [$start, $end) 共 $len"
+
+python3 '"$RUNNER"' \
+  --data-type '"$DATA_TYPE"' \
+  --spectra-root '"$SPECTRA_ROOT"' \
+  --sightline-root '"$SIGHTLINE_ROOT"' \
+  --list-cache-root '"$LIST_CACHE_ROOT"' \
+  --release '"$RELEASE"' \
+  --value $start --length $len \
+  --batch-size '"$BATCH_SIZE"' --max-windows '"$MAX_WINDOWS"' \
+  --scratch-out '"$DLACAT_ROOT"'
+'
+```
+
+### Submit Jobs (Batch)
+
+Use `Run_DLAfinder/submit_desi_DLAfinder_run.sh` to run 4 tasks per node (1 GPU each).
+It splits the file list across tasks and writes per-task logs.
+
+## Path Conventions
+
+Mock (layout `k/j`):
+- spectra: `<spectra-root>/<k>/<j>/spectra-16-<j>.fits`
+- zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
+- sightlines: `<sightline-root>/<k>/<j>/sightlines-<j>.npy`
+- pred: `<scratch-out or sightline-root>/<k>/<j>/sightlines-pred_gpu-<j>.npy`
+- dlacat: `<scratch-out or sightline-root>/<k>/<j>/dlacat_gpu-<j>.fits`
+
+Data (layout `k`):
+- spectra: `<spectra-root>/<k>/<j>/spectra-main-dark-<j>.fits.gz`
+- zbest: `<spectra-root>/<k>/<j>/zbest-16-<j>.fits`
+- sightlines: `<sightline-root>/<k>/<j>-pre-sightlines.npy`
+- pred: `<scratch-out or sightline-root>/<k>/<j>-pre-sightlines-pred.npy`
+- dlacat: `<scratch-out or sightline-root>/<k>/<j>-dlacat.fits`
+
+If your filenames differ, override with the `--*-pattern` flags.
+
+## Stacking Catalogs After Running
 
 Enable stacking at the end of a run:
 
@@ -178,6 +247,20 @@ Defaults:
 - `--skip-existing-pred` skip already-predicted files
 - `--fill-missing-dlacat` repair missing catalogs from existing predictions
 
+## Use Retrained Models (Optional)
+
+By default, prediction uses the legacy checkpoints. To switch to retrained models,
+set environment variables before running:
+
+```bash
+export DESIDLAS_CKPT_LOW1=/pscratch/sd/t/<user>/retraining/models/low1/current_135000
+export DESIDLAS_CKPT_LOW2=/pscratch/sd/t/<user>/retraining/models/low2/current_135000
+export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
+```
+
+Unset them to return to the default models. If you are not on NERSC, you will
+need to set these explicitly.
+
 ## Environment Variables (Common)
 - `DESIDLAS_CKPT_LOW1`, `DESIDLAS_CKPT_LOW2`, `DESIDLAS_CKPT_MID` override model checkpoints
 - `DESIDLAS_PEAK_THRESH` peak threshold (default 0.2)
@@ -187,12 +270,12 @@ Defaults:
 
 ## Submit Script (GPU, 4 tasks)
 
-Use `submit_desi_DLAfinder_run.sh` to run 4 tasks per node (1 GPU each).
+Use `Run_DLAfinder/submit_desi_DLAfinder_run.sh` to run 4 tasks per node (1 GPU each).
 It splits the file list across tasks and writes per-task logs.
 
 ## Tips
 
 - For A100 40GB, start with `--batch-size 512` and `--max-windows 16384`.
 - If you see out-of-memory, reduce `--max-windows` first.
- - If you have an existing `filelist_*.npz` in `--list-cache-root`, you can omit
-   `--spectra-root` unless you need to rebuild the list.
+- If you have an existing `filelist_*.npz` in `--list-cache-root`, you can omit
+  `--spectra-root` unless you need to rebuild the list.
