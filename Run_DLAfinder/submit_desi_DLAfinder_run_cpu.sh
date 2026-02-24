@@ -28,9 +28,9 @@ LIST_CACHE_ROOT=$SCR_OUT/data
 RELEASE=y3_saclay
 
 # Optional: retrained checkpoints
-# export DESIDLAS_CKPT_LOW1=/pscratch/sd/<user>/retraining/models/low1/current_XXXXXX
-# export DESIDLAS_CKPT_LOW2=/pscratch/sd/<user>/retraining/models/low2/current_XXXXXX
-# export DESIDLAS_CKPT_MID=/pscratch/sd/<user>/retraining/models/mid/current_XXXXXX
+# export DESIDLAS_CKPT_LOW1=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/low1/current_199999
+# export DESIDLAS_CKPT_LOW2=//global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/low2/current_499999
+# export DESIDLAS_CKPT_MID=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/mid/current_460000
 
 TOTAL=$(python -c "import glob,os,numpy as np; root=os.environ['LIST_CACHE_ROOT']; files=sorted(glob.glob(os.path.join(root,'filelist_*.npz')), key=os.path.getmtime); d=np.load(files[-1], allow_pickle=True); print(len(d['spectra']))")
 NODES=12

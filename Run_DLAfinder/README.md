@@ -151,7 +151,22 @@ MAX_WINDOWS=16384
 # ---- Work range ----
 BASE_START=0
 GPU_PER_NODE=4
+
+# Option A (manual): set TOTAL explicitly
 TOTAL=1127
+
+# Option B (auto): infer TOTAL from latest filelist cache
+# Uncomment this block if you do not know TOTAL.
+# TOTAL=$(python3 - <<'PY'
+# import glob, os, numpy as np
+# root = os.environ.get("LIST_CACHE_ROOT", "")
+# files = sorted(glob.glob(os.path.join(root, "filelist_*.npz")), key=os.path.getmtime)
+# if not files:
+#     raise SystemExit("No list cache found in LIST_CACHE_ROOT. Run once with --rebuild-list.")
+# d = np.load(files[-1], allow_pickle=True)
+# print(len(d["spectra"]))
+# PY
+# )
 
 CHUNK=$(( (TOTAL + GPU_PER_NODE - 1) / GPU_PER_NODE ))
 export TOTAL CHUNK BASE_START GPU_PER_NODE
@@ -253,9 +268,9 @@ By default, prediction uses the legacy checkpoints. To switch to retrained model
 set environment variables before running:
 
 ```bash
-export DESIDLAS_CKPT_LOW1=/pscratch/sd/t/<user>/retraining/models/low1/current_135000
-export DESIDLAS_CKPT_LOW2=/pscratch/sd/t/<user>/retraining/models/low2/current_135000
-export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
+export DESIDLAS_CKPT_LOW1=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/low1/current_199999
+export DESIDLAS_CKPT_LOW2=//global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/low2/current_499999
+export DESIDLAS_CKPT_MID=/global/cfs/cdirs/desi/users/tingtan/DLA_finder/retraining/models/mid/current_460000
 ```
 
 Unset them to return to the default models. If you are not on NERSC, you will
