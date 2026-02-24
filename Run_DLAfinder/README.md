@@ -19,8 +19,15 @@ Create a GPU environment (choose your own path):
 ```bash
 module load python
 conda create -y -p /path/to/conda_envs/CNN_GPU python=3.10
-source activate /path/to/conda_envs/CNN_GPU
+conda activate /path/to/conda_envs/CNN_GPU
 pip install 'tensorflow[and-cuda]==2.15.*'
+pip install -e /path/to/desi-dlas
+```
+
+If you cannot install editable, set:
+
+```bash
+export PYTHONPATH=/path/to/desi-dlas:$PYTHONPATH
 ```
 
 ## Decide Your Run Settings
@@ -66,7 +73,7 @@ Required paths:
 - `--list-cache-root`: cache directory (keeps startup fast)
 
 ```bash
-python3 desi_DLAfinder_run.py \
+python3 Run_DLAfinder/desi_DLAfinder_run.py \
   --data-type mock \
   --release <release_name> \
   --spectra-root <mock_spectra_root> \
@@ -87,7 +94,7 @@ Use the dedicated CPU-only helper to generate sightlines without touching GPUs:
 module load python
 conda activate /global/cfs/cdirs/desi/users/tingtan/conda_envs/CNN_GPU
 
-python3 desi_DLAfinder_make_sightlines_cpu.py \
+python3 Run_DLAfinder/desi_DLAfinder_make_sightlines_cpu.py \
   --data-type mock \
   --spectra-root <mock_spectra_root> \
   --sightline-root <sightline_output_root> \
@@ -111,12 +118,13 @@ export DESIDLAS_CKPT_LOW2=/pscratch/sd/t/<user>/retraining/models/low2/current_1
 export DESIDLAS_CKPT_MID=/pscratch/sd/t/<user>/retraining/models/mid/current_99999
 ```
 
-Unset them to return to the default models.
+Unset them to return to the default models. If you are not on NERSC, you will
+need to set these explicitly.
 
 ### Data (minimal + survey/program/version)
 
 ```bash
-python3 desi_DLAfinder_run.py \
+python3 Run_DLAfinder/desi_DLAfinder_run.py \
   --data-type data \
   --release <release_name> --survey <survey> --program <program> --version <version> \
   --spectra-root <data_spectra_root> \
@@ -167,6 +175,15 @@ Defaults:
 - `--stack-dlacat` stack per-file catalogs into one FITS
 - `--stack-output` output path for stacked catalog
 - `--stack-scope` `range|all`
+- `--skip-existing-pred` skip already-predicted files
+- `--fill-missing-dlacat` repair missing catalogs from existing predictions
+
+## Environment Variables (Common)
+- `DESIDLAS_CKPT_LOW1`, `DESIDLAS_CKPT_LOW2`, `DESIDLAS_CKPT_MID` override model checkpoints
+- `DESIDLAS_PEAK_THRESH` peak threshold (default 0.2)
+- `DESIDLAS_LEVEL` confidence level (default 0.5)
+- `DESIDLAS_FORCE_CPU=1` force CPU prediction
+- `DESIDLAS_CPU_WORKERS=<N>` CPU worker count for CPU prediction
 
 ## Submit Script (GPU, 4 tasks)
 
@@ -177,3 +194,5 @@ It splits the file list across tasks and writes per-task logs.
 
 - For A100 40GB, start with `--batch-size 512` and `--max-windows 16384`.
 - If you see out-of-memory, reduce `--max-windows` first.
+ - If you have an existing `filelist_*.npz` in `--list-cache-root`, you can omit
+   `--spectra-root` unless you need to rebuild the list.
