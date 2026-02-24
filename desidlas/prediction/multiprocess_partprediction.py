@@ -1,12 +1,12 @@
-# multiprocess_partprediction.py — GPU快速推理版(修正多维输入)
+# multiprocess_partprediction.py — GPU fast inference (multi-dim input fix)
 import os, re, sys, timeit, logging
 import numpy as np
 from tqdm import tqdm
 
-# ---- 搜索路径 ----
+# ---- Search path ----
 sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
 
-# ---- TensorFlow TF1风格设置 ----
+# ---- TensorFlow TF1-style settings ----
 import tensorflow as tf
 tf.compat.v1.disable_eager_execution()
 from tensorflow.compat.v1 import ConfigProto
@@ -17,16 +17,16 @@ config.allow_soft_placement = True
 config.intra_op_parallelism_threads = 2
 config.inter_op_parallelism_threads = 2
 
-# 线程数控制
+# Thread count controls
 os.environ.setdefault("OMP_NUM_THREADS", "2")
 os.environ.setdefault("MKL_NUM_THREADS", "2")
 
-# ---- 项目依赖 ----
+# ---- Project dependencies ----
 from desidlas.datasets.get_flux import make_dataset
 from desidlas.training.parameterset import parameter_names, parameters
 from desidlas.training.model import build_model
 
-# ---- 模型常量(全局) ----
+# ---- Model constants (global) ----
 MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 1}
 INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 400}
 CKPT = {
@@ -44,7 +44,7 @@ CKPT = {
     ),
 }
 
-# ---- 工具函数 ----
+# ---- Helpers ----
 def _get_handles(graph):
     x = graph.get_tensor_by_name('x:0')
     keep_prob = graph.get_tensor_by_name('keep_prob:0')
@@ -60,11 +60,11 @@ def get_hparams(model: str):
         hp[parameter_names[k]] = parameters[k][0]
     return hp
 
-# ---- 全局会话缓存 ----
+# ---- Global session cache ----
 _SESSION_CACHE = {}
 
 def _get_model_session(model_key, INPUT_SIZE, matrix_size, ckpt_path):
-    """每种模型只加载一次"""
+    """Load each model once."""
     if model_key in _SESSION_CACHE:
         print(f"[MODEL] reuse cached → {model_key}", flush=True)
         return _SESSION_CACHE[model_key]
@@ -86,12 +86,12 @@ def _get_model_session(model_key, INPUT_SIZE, matrix_size, ckpt_path):
     _SESSION_CACHE[model_key] = (g, sess, handles)
     return _SESSION_CACHE[model_key]
 
-# ---- 流式批处理推理(支持多维输入) ----
+# ---- Streaming batch inference (supports multi-dim input) ----
 def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size, 
                          ckpt_path, batch_size=16384):
     """
-    对同一分桶的多条sightline进行流式批处理推理
-    支持 2D: [batch, L] 和 3D: [batch, C, L] 输入
+    Streamed batch inference for sightlines in the same bucket.
+    Supports 2D: [batch, L] and 3D: [batch, C, L] inputs.
     """
     t0 = timeit.default_timer()
     g, sess, (x, keep_prob, t_pred, t_conf, t_off, t_col) = _get_model_session(
@@ -99,9 +99,9 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
     )
 
     L = INPUT_SIZE
-    C = matrix_size  # 通道数: low/mid/high=1 (raw flux)
+    C = matrix_size  # channels: low/mid/high=1 (raw flux)
     
-    # 根据matrix_size决定缓冲区形状
+    # Decide buffer shape based on matrix_size
     if C > 1:
         buf = np.empty((batch_size, C, L), dtype=np.float32)
     else:
@@ -131,7 +131,7 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
             Wi = fi.shape[0]
             tmp_lam[i] = lam_i
 
-            # 验证形状匹配
+            # Validate shape
             if C > 1:
                 assert fi.ndim == 3 and fi.shape[1:] == (C, L), \
                     f"Expected shape [W, {C}, {L}], got {fi.shape}"
@@ -143,7 +143,7 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
             while start < Wi:
                 need = min(batch_size - pos, Wi - start)
                 
-                # 复制数据到缓冲区(处理多维情况)
+                # Copy data into buffer (handle multi-dim)
                 if C > 1:
                     buf[pos:pos+need, :, :] = fi[start:start+need, :, :]
                 else:
@@ -153,7 +153,7 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
                 pos += need
                 start += need
 
-                # 批满则运行
+                # Run when batch is full
                 if pos == batch_size:
                     p, c, o, d = sess.run(
                         [t_pred, t_conf, t_off, t_col],
@@ -168,9 +168,9 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
                     pending.clear()
                     total_runs += 1
 
-        # 处理最后一批
+        # Handle final partial batch
         if pos > 0 and pending:
-            # 只取实际填充的部分
+            # Only use the filled portion
             actual_buf = buf[:pos, ...] if C > 1 else buf[:pos, :]
             
             p, c, o, d = sess.run(
@@ -184,7 +184,7 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
                 tmp_col[idx].append(d[s:e])
             total_runs += 1
 
-        # 合并结果
+        # Merge results
         for i in index_list:
             if not tmp_pred[i]:
                 results[i] = None
@@ -202,7 +202,7 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
     print(f"[STREAM] {model_key.upper()} done in {timeit.default_timer()-t0:.2f}s ({total_runs} GPU runs)", flush=True)
     return results
 
-# ---- 单文件快速推理 ----
+# ---- Single-file fast inference ----
 def pred_file_fast(npy_path, savefile):
     t0 = timeit.default_timer()
     print(f"[FAST] Processing: {npy_path}", flush=True)
@@ -225,7 +225,7 @@ def pred_file_fast(npy_path, savefile):
     
     print(f"[FAST] Groups: low1={len(idx_low1)}, low2={len(idx_low2)}, mid={len(idx_mid)}", flush=True)
 
-    # 流式批处理
+    # Streaming batch processing
     out_map = {}
     if idx_low1:
         out_map.update(_infer_bucket_stream(
@@ -246,16 +246,16 @@ def pred_file_fast(npy_path, savefile):
             batch_size=16384
         ))
 
-    # 还原顺序
+    # Restore original order
     results = [out_map.get(i, None) for i in range(len(lines))]
     
-    # 确保目录存在
+    # Ensure directory exists
     os.makedirs(os.path.dirname(savefile), exist_ok=True)
     np.save(savefile, results)
     
     print(f"[FAST] Saved to {savefile} in {timeit.default_timer()-t0:.2f}s", flush=True)
 
-# ---- 顶层调度 ----
+# ---- Top-level dispatch ----
 def predictions_desi(pred_sightlines, savefile):
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
     tf.get_logger().setLevel(logging.ERROR)
@@ -264,7 +264,7 @@ def predictions_desi(pred_sightlines, savefile):
         pred_file_fast(pred_sightlines, savefile)
         return
 
-    assert len(pred_sightlines) == len(savefile), "路径列表长度不一致"
+    assert len(pred_sightlines) == len(savefile), "Path list lengths do not match"
     workers = int(os.environ.get("DESIDLAS_CPU_WORKERS", "1"))
     if workers <= 1:
         for in_path, out_path in zip(pred_sightlines, savefile):

@@ -1,5 +1,10 @@
 # desi-dlas
-DLA finder(s) for DESI data. This repository provides:
+DLA finder(s) for DESI data. This version adds:
+- GPU-accelerated prediction
+- retrained models on DESI Y3 mocks
+- an NHI afterburner stage (see overview and Tan et al., in prep.)
+
+This repository provides:
 - A unified runner for mock and observational data
 - CPU/GPU prediction
 - Optional sightline generation and DLA catalog stacking
@@ -57,7 +62,7 @@ export DESIDLAS_CKPT_MID=/path/to/models/mid/current_XXXXXX
 
 ## Documentation
 - Unified runner: `Run_DLAfinder/README.md`
-- Training overview: `docs/training_overview.md`
+- Training/model overview: `TRAINING_OVERVIEW.md`
 
 ## Authors
 Contributors:

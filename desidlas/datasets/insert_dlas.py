@@ -103,7 +103,7 @@ def insert_dlas(sightline,overlap=False, rstate=None, slls=False,
         noise = rand * sightline.error * np.sqrt(1-vmodel.flux.value**2)
     else:
         noise=0
-    #spec可有可无
+    # spec is optional
     final_spec = XSpectrum1D.from_tuple((vmodel.wavelength,spec.flux.value*vmodel.flux.value+noise))#Generate spec
     #generate new sightline
     sightline.flux=final_spec.flux.value
@@ -111,6 +111,5 @@ def insert_dlas(sightline,overlap=False, rstate=None, slls=False,
     sightline.s2n=estimate_s2n(sightline)
     return 
     
-
 
 

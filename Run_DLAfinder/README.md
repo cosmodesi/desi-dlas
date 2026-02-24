@@ -10,7 +10,7 @@ Main entrypoint:
 - `Run_DLAfinder/desi_DLAfinder_run.py`
 
 References:
-- training overview: `docs/training_overview.md`
+- training overview: `TRAINING_OVERVIEW.md`
 - retraining guide: `Run_DLAfinder/README-training.md`
 
 ## What The Runner Does
@@ -185,7 +185,7 @@ start=$(( BASE_START + SLURM_LOCALID * CHUNK ))
 end=$(( start + CHUNK ))
 
 if [ $start -ge $upper ]; then
-  echo "[GPU $SLURM_LOCALID] start=$start 超出 upper=$upper, 跳过。"
+  echo "[GPU $SLURM_LOCALID] start=$start exceeds upper=$upper, skipping."
   exit 0
 fi
 if [ $end -gt $upper ]; then
@@ -193,7 +193,7 @@ if [ $end -gt $upper ]; then
 fi
 len=$(( end - start ))
 
-echo "[GPU $SLURM_LOCALID] 跑索引区间: [$start, $end) 共 $len"
+echo "[GPU $SLURM_LOCALID] running range: [$start, $end) total $len"
 
 python3 '"$RUNNER"' \
   --data-type '"$DATA_TYPE"' \

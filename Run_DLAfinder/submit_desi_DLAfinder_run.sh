@@ -80,7 +80,7 @@ srun --ntasks=${GPU_PER_NODE} --gpus-per-task=1 --cpus-per-task=4 \
   end=$(( start + CHUNK ))
 
   if [ $start -ge $upper ]; then
-    echo "[GPU $SLURM_LOCALID] start=$start 超出 upper=$upper, 跳过。"
+    echo "[GPU $SLURM_LOCALID] start=$start exceeds upper=$upper, skipping."
     exit 0
   fi
   if [ $end -gt $upper ]; then
@@ -88,7 +88,7 @@ srun --ntasks=${GPU_PER_NODE} --gpus-per-task=1 --cpus-per-task=4 \
   fi
   len=$(( end - start ))
 
-  echo "[GPU $SLURM_LOCALID] 跑索引区间: [$start, $end) 共 $len"
+  echo "[GPU $SLURM_LOCALID] running range: [$start, $end) total $len"
 
   python3 '"$RUNNER"' \
     --data-type '"$DATA_TYPE"' \

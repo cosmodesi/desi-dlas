@@ -14,12 +14,12 @@ import multiprocessing
 from desidlas.training.parameterset import parameter_names
 from desidlas.training.parameterset import parameters
 
-# ---- 全局缓存：每种模型只加载一次 ----
+# ---- Global cache: load each model once ----
 _model_cache = {}
 
 def _get_model_sess(model_key, INPUT_SIZE, matrix_size, checkpoint_filename):
     """
-    返回 (graph, sess, handles)：
+    Returns (graph, sess, handles):
       handles = (x, keep_prob, t_pred, t_conf, t_off, t_col)
     """
     if model_key in _model_cache:
@@ -27,9 +27,9 @@ def _get_model_sess(model_key, INPUT_SIZE, matrix_size, checkpoint_filename):
 
     g = tf.Graph()
     with g.as_default():
-        # 构图
+        # Build graph
         build_model(hyperparameters=None, INPUT_SIZE=INPUT_SIZE, matrix_size=matrix_size)
-        # 注意：TF1 Session 带 config，避免一次吃满显存
+        # Note: use TF1 Session with config to avoid grabbing all GPU memory at once
         sess = tf.compat.v1.Session(graph=g, config=config)
         with sess.as_default():
             saver = tf.compat.v1.train.Saver()
@@ -47,8 +47,8 @@ def _get_model_sess(model_key, INPUT_SIZE, matrix_size, checkpoint_filename):
 
 def _infer_batch(model_key, INPUT_SIZE, matrix_size, ckpt, flux_batch, batch_size=8192):
     """
-    用缓存的会话对 flux_batch（shape [N, L]）做批量推理。
-    返回 pred, conf, offset, coldensity（都是 [N]）
+    Use cached session to run batch inference on flux_batch (shape [N, L]).
+    Returns pred, conf, offset, coldensity (all shape [N]).
     """
     g, sess, (x, keep_prob, t_pred, t_conf, t_off, t_col) = _get_model_sess(
         model_key, INPUT_SIZE, matrix_size, ckpt
@@ -142,7 +142,7 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
 '''
 def predictions_ann(hyperparameters, INPUT_SIZE, matrix_size, flux, checkpoint_filename, TF_DEVICE=''):
     """
-    用训练好的 CNN 做推理（TF1 风格）
+    Run inference with a trained CNN (TF1-style).
     """
     timer = timeit.default_timer()
     BATCH_SIZE = 4000
@@ -153,16 +153,16 @@ def predictions_ann(hyperparameters, INPUT_SIZE, matrix_size, flux, checkpoint_f
     offset = np.copy(pred)
     coldensity = np.copy(pred)
 
-    # 关键：建图 → 建 Session（带 config=ConfigProto(allow_growth=True)）
+    # Key: build graph -> build Session (with ConfigProto(allow_growth=True))
     with tf.Graph().as_default():
         build_model(hyperparameters, INPUT_SIZE, matrix_size)
 
-        # 注意这里：Session 必须带 config=config，否则会一次性占满显存
+        # Note: Session must use config=config, or it may grab all GPU memory
         with tf.device(TF_DEVICE), tf.compat.v1.Session(config=config) as sess:
-            # 恢复 checkpoint
+            # Restore checkpoint
             tf.compat.v1.train.Saver().restore(sess, checkpoint_filename + ".ckpt")
 
-            # 批量推理
+            # Batch inference
             for i in range(0, n_samples, BATCH_SIZE):
                 sl = slice(i, min(i + BATCH_SIZE, n_samples))
                 pred[sl], conf[sl], offset[sl], coldensity[sl] = sess.run(
@@ -220,12 +220,12 @@ def pred_sightline(sightline):#sightline#pred_sightlines,savefile
 
 def pred_file_fast(npy_path, savefile):
     """
-    快速处理一个 sightline 文件（.npy）：
-      - 分组（low1/low2/mid）
-      - 把每组所有窗口拼成大矩阵，批量推理
-      - 拆回每条 sightline，写成你原有的 results 结构
+    Fast path for a single sightline file (.npy):
+      - group by SNR bucket (low1/low2/mid)
+      - concatenate windows per group and run batched inference
+      - split back per sightline and keep original results structure
     """
-    # 与原逻辑一致的参数
+    # Parameters consistent with the original logic
     matrix_size = {'high':1, 'mid':1, 'low1':1, 'low2':1}
     INPUT_SIZE  = {'high':400,'mid':400,'low1':400,'low2':400}
     ckpt = {
@@ -250,10 +250,10 @@ def pred_file_fast(npy_path, savefile):
     arr = np.load(npy_path, allow_pickle=True, encoding='latin1')
     lines = arr.ravel()
 
-    # 按 s2n 分组
+    # Group by s2n
     idx_low1, idx_low2, idx_mid = [], [], []
     for i, sight in enumerate(lines):
-        if sight == []:  # 跳过空
+        if sight == []:  # skip empty
             continue
         s2n = getattr(sight, 's2n', 0)
         if s2n < 1.5:
@@ -265,11 +265,11 @@ def pred_file_fast(npy_path, savefile):
 
     results = [None] * len(lines)
 
-    # 辅助：把一组 sightlines 做成大 batch
+    # Helper: pack a group of sightlines into a large batch
     def build_batch(index_list, model_key):
         flux_list, lam_list, sizes = [], [], []
         for i in index_list:
-            flux, lam = make_dataset(lines[i])   # 原版函数
+            flux, lam = make_dataset(lines[i])   # original function
             flux_list.append(flux.astype('float32'))  # shape [Wi, L]
             lam_list.append(lam)
             sizes.append(flux.shape[0])
@@ -278,22 +278,22 @@ def pred_file_fast(npy_path, savefile):
         big = np.vstack(flux_list)   # [sum Wi, L]
         return big, lam_list, sizes
 
-    # 低1 SNR 组
+    # Low1 SNR group
     big, lam_list, sizes = build_batch(idx_low1, 'low1')
     if big is not None:
         p, c, o, d = _infer_batch('low1', INPUT_SIZE['low1'], matrix_size['low1'], ckpt['low1'], big)
-        # 拆回每条 sightline
+        # Split back per sightline
         cursor = 0
         for i, sz in zip(idx_low1, sizes):
             sl = slice(cursor, cursor+sz)
             results[i] = {
                 'pred': p[sl], 'conf': c[sl],
                 'offset': o[sl], 'coldensity': d[sl],
-                'lam': lam_list[cursor - (cursor - cursor)]  # 用 lam_list 的同序元素
+                'lam': lam_list[cursor - (cursor - cursor)]  # matching element from lam_list
             }
             cursor += sz
 
-    # 低2 SNR 组
+    # Low2 SNR group
     big, lam_list, sizes = build_batch(idx_low2, 'low2')
     if big is not None:
         p, c, o, d = _infer_batch('low2', INPUT_SIZE['low2'], matrix_size['low2'], ckpt['low2'], big)
@@ -307,7 +307,7 @@ def pred_file_fast(npy_path, savefile):
             }
             cursor += sz
 
-    # 中 SNR 组
+    # Mid SNR group
     big, lam_list, sizes = build_batch(idx_mid, 'mid')
     if big is not None:
         p, c, o, d = _infer_batch('mid', INPUT_SIZE['mid'], matrix_size['mid'], ckpt['mid'], big)
@@ -333,7 +333,7 @@ def execute_single_task(task_id, data_entries, savefile, cpu_count):
         np.save(savefile,results)
 '''
 def execute_single_task(task_id, data_entries, savefile, cpu_count):
-    # 单进程串行：避免 TF + Pool 的死锁/卡顿
+    # Single-process serial: avoid TF + Pool deadlocks/stalls
     results = [pred_sightline(x) for x in data_entries]
     np.save(savefile, results)
 
@@ -372,13 +372,13 @@ def predictions_desi(pred_sightlines, savefile):
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.DEBUG)
     tf.get_logger().setLevel(logging.WARNING)
 
-    # 单进程顺序跑（GPU 最稳，吞吐由 batch 决定）
+    # Single-process sequential run (GPU is most stable; throughput depends on batch size)
     if isinstance(pred_sightlines, str):
         r = np.load(pred_sightlines, allow_pickle=True, encoding='latin1')
         results = pred_sightline(tqdm(r.ravel()))
         np.save(savefile, results)
     else:
-        assert len(pred_sightlines) == len(savefile), "pred_sightlines 与 savefile 长度不一致"
+        assert len(pred_sightlines) == len(savefile), "pred_sightlines and savefile lengths differ"
         for task_id, path in enumerate(pred_sightlines):
             r = np.load(path, allow_pickle=True, encoding='latin1')
             results = [pred_sightline(x) for x in tqdm(r.ravel(), total=r.size)]
@@ -389,15 +389,15 @@ def predictions_desi(pred_sightlines, savefile):
     tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
     tf.get_logger().setLevel(logging.ERROR)
 
-    # 单文件路径 → 直接跑
+    # Single file path -> run directly
     if isinstance(pred_sightlines, str):
         r = np.load(pred_sightlines, allow_pickle=True, encoding='latin1')
         results = [pred_sightline(x) for x in tqdm(r.ravel(), total=r.size)]
         np.save(savefile, results)
         return
 
-    # 多文件路径数组 → 逐个顺序跑
-    assert len(pred_sightlines) == len(savefile), "pred_sightlines 与 savefile 长度不一致"
+    # Multiple file paths -> run sequentially
+    assert len(pred_sightlines) == len(savefile), "pred_sightlines and savefile lengths differ"
     for in_path, out_path in zip(pred_sightlines, savefile):
         r = np.load(in_path, allow_pickle=True, encoding='latin1')
         results = [pred_sightline(x) for x in tqdm(r.ravel(), total=r.size)]

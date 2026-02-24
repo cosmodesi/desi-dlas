@@ -4,7 +4,7 @@ import numpy as np
 from desidlas.dla_cnn import defs
 from desidlas.datasets.datasetting import split_sightline_into_samples
 
-# 尝试导入CuPy
+# Try to import CuPy
 try:
     import cupy as cp
     from cupyx.scipy import signal as cp_signal
@@ -14,7 +14,7 @@ except ImportError:
 
 
 def smooth_flux(flux):
-    """自动选择GPU或CPU版本"""
+    """Auto-select GPU or CPU implementation."""
     return smooth_flux_cpu(flux)
 
 
@@ -30,24 +30,24 @@ def _gpu_available():
 
 
 def smooth_flux_gpu(flux):
-    """GPU加速版本"""
-    # 转到GPU
+    """GPU-accelerated version."""
+    # Move to GPU
     flux_gpu = cp.asarray(flux)
     
-    # 并行做中值滤波
+    # Parallel median filters
     smooth3 = cp_signal.medfilt(flux_gpu, [1, 3])
     smooth7 = cp_signal.medfilt(flux_gpu, [1, 7])
     smooth15 = cp_signal.medfilt(flux_gpu, [1, 15])
     
-    # 堆叠: (n_windows, 4, L)
+    # Stack: (n_windows, 4, L)
     flux_matrix = cp.stack([flux_gpu, smooth3, smooth7, smooth15], axis=1)
     
-    # 转回CPU
+    # Move back to CPU
     return cp.asnumpy(flux_matrix)
 
 
 def smooth_flux_cpu(flux):
-    """原始CPU版本（保持不变）"""
+    """Original CPU version (unchanged)."""
     flux_matrix = []
     for sample in flux:
         smooth3 = signal.medfilt(sample, 3)
@@ -58,7 +58,7 @@ def smooth_flux_cpu(flux):
 
 
 def make_dataset(sightline):
-    """保持接口不变"""
+    """Keep the interface unchanged."""
     data_split = split_sightline_into_samples(
         sightline,
         REST_RANGE=defs.REST_RANGE,

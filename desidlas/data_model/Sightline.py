@@ -85,7 +85,7 @@ class Sightline(object):
         peak_difference_spectrum = np.abs(lam_analyse[self.prediction.peaks_ixs] - lambda_higher)
         nearest_peak_ix = np.argmin(peak_difference_spectrum)#nearest peak
 
-        # get the column density of the identfied nearest peak算这两个的nhi
+        # get the column density of the identified nearest peak (compute NHI)
         _, potential_lya_nhi, _, _ = \
             self.prediction.get_coldensity_for_peak(self.prediction.peaks_ixs[nearest_peak_ix])
         _, potential_lyb_nhi, _, _ = \

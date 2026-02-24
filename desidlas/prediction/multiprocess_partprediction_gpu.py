@@ -20,7 +20,7 @@ from desidlas.training.parameterset import parameter_names, parameters
 
 
 class Timer:
-    """计时器工具类"""
+    """Simple timing helper."""
     
     def __init__(self, name="Timer"):
         self.name = name
@@ -35,7 +35,7 @@ class Timer:
         self.elapsed = time.time() - self.start_time
     
     def format_time(self, seconds):
-        """格式化时间显示"""
+        """Format elapsed time."""
         if seconds < 60:
             return f"{seconds:.2f}s"
         elif seconds < 3600:
@@ -48,14 +48,14 @@ class Timer:
 
 
 class PerformanceMonitor:
-    """性能监控类"""
+    """Performance monitoring helper."""
     
     def __init__(self):
         self.timings = {}
         self.counts = {}
     
     def record(self, name, elapsed, count=1):
-        """记录时间"""
+        """Record timing info."""
         if name not in self.timings:
             self.timings[name] = []
             self.counts[name] = 0
@@ -63,7 +63,7 @@ class PerformanceMonitor:
         self.counts[name] += count
     
     def get_stats(self, name):
-        """获取统计信息"""
+        """Get summary statistics."""
         if name not in self.timings:
             return None
         times = self.timings[name]
@@ -78,7 +78,7 @@ class PerformanceMonitor:
         }
     
     def print_summary(self):
-        """打印汇总统计"""
+        """Print summary statistics."""
         print("\n" + "="*80)
         print("PERFORMANCE SUMMARY")
         print("="*80)
@@ -97,10 +97,10 @@ class PerformanceMonitor:
 
 
 class DLAModelGPU:
-    """GPU版本的DLA检测模型包装器"""
+    """GPU wrapper for DLA detection models."""
     
     def __init__(self):
-        """初始化并加载三个模型（low1/low2/mid SNR）"""
+        """Initialize and load three models (low1/low2/mid SNR)."""
         self.models = {}
         self.model_paths = {
             'low1': os.environ.get(
@@ -137,7 +137,7 @@ class DLAModelGPU:
         print(f"{'='*80}\n")
     
     def _load_tf1_model(self, checkpoint_path, model_type):
-        """从TF1的checkpoint加载模型到TF2"""
+        """Load a TF1 checkpoint, expose a TF2-compatible interface."""
         h5_path = checkpoint_path.replace('current_99999', 'model.h5')
         if os.path.exists(h5_path):
             return keras.models.load_model(h5_path, compile=False)
@@ -152,7 +152,7 @@ class DLAModelGPU:
                 self._load()
             
             def _load(self):
-                """加载TF1模型，自动处理设备映射"""
+                """Load TF1 model and remap devices automatically."""
                 self.graph = tf.compat.v1.Graph()
                 with self.graph.as_default():
                     config = tf.compat.v1.ConfigProto()
@@ -171,7 +171,7 @@ class DLAModelGPU:
                     print(f"      Model loaded and remapped to available GPU")
             
             def predict(self, flux_batch):
-                """批量预测"""
+                """Batch prediction."""
                 with self.graph.as_default():
                     pred = self.graph.get_tensor_by_name('prediction:0')
                     conf = self.graph.get_tensor_by_name('output_classifier:0')
@@ -193,7 +193,7 @@ class DLAModelGPU:
         return TF1ModelWrapper(checkpoint_path)
     
     def predict_batch(self, flux_batch, model_type='mid'):
-        """批量预测"""
+        """Batch prediction."""
         model = self.models[model_type]
         
         if isinstance(model, keras.Model):
@@ -205,11 +205,11 @@ class DLAModelGPU:
 
 def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_per_batch=4096):
     """
-    批量处理多条视线 - 窗口级批处理优化版
+    Batch-process multiple sightlines with window-level batching.
     """
     results = []
     
-    # 第一步：收集所有数据并按SNR分组
+    # Step 1: collect data and group by SNR
     with Timer("data_preprocessing") as t:
         all_flux = {'low1': [], 'low2': [], 'mid': []}
         all_metadata = {'low1': [], 'low2': [], 'mid': []}
@@ -222,13 +222,13 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
             try:
                 flux, lam = make_dataset(sightline)
                 
-                # 修正lam形状
+                # Fix lam shape
                 if len(lam.shape) == 2:
                     lam = lam[0]
                 
                 n_windows = flux.shape[0]
                 
-                # 根据SNR分类
+                # Classify by SNR
                 if hasattr(sightline, 's2n'):
                     if sightline.s2n < 1.5:
                         model_type = 'low1'
@@ -252,21 +252,21 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
     
     monitor.record('preprocessing', t.elapsed, len(sightlines_batch))
     
-    # 第二步：对每个SNR类别进行大batch预测
+    # Step 2: run large-batch prediction per SNR bucket
     all_predictions = {}
     
     for model_type in ['low1', 'low2', 'mid']:
         if len(all_flux[model_type]) == 0:
             continue
         
-        # 合并所有flux
+        # Concatenate all flux
         flux_combined = np.concatenate(all_flux[model_type], axis=0)
         total_windows = flux_combined.shape[0]
         metadata_list = all_metadata[model_type]
         
         print(f"    {model_type.upper()} SNR: {len(metadata_list)} sightlines, {total_windows} windows")
         
-        # 第三步：分批GPU推理
+        # Step 3: GPU inference in sub-batches
         all_pred = []
         all_conf = []
         all_offset = []
@@ -288,7 +288,7 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
                 all_offset.append(offset)
                 all_coldensity.append(coldensity)
         
-        # 合并结果
+        # Merge results
         all_pred = np.concatenate(all_pred, axis=0)
         all_conf = np.concatenate(all_conf, axis=0)
         all_offset = np.concatenate(all_offset, axis=0)
@@ -296,7 +296,7 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
         
         monitor.record(f'inference_{model_type}', t.elapsed, total_windows)
         
-        # 第四步：分配回各个sightline
+        # Step 4: assign back to each sightline
         window_idx = 0
         for metadata in metadata_list:
             sightline_idx = metadata['sightline_idx']
@@ -313,7 +313,7 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
             
             window_idx += n_windows
     
-    # 第五步：按原始顺序返回
+    # Step 5: return in original order
     final_results = []
     for idx in range(len(sightlines_batch)):
         if idx in all_predictions:
@@ -325,7 +325,7 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
 
 
 def predictions_desi_gpu(pred_sightlines, savefile, batch_size=128, max_windows_per_batch=4096):
-    """GPU批处理主函数"""
+    """GPU batch-processing entrypoint."""
     
     monitor = PerformanceMonitor()
     overall_start = time.time()
@@ -473,7 +473,7 @@ def predictions_desi_gpu(pred_sightlines, savefile, batch_size=128, max_windows_
 
 
 def predictions_desi(pred_sightlines, savefile):
-    """兼容旧接口"""
+    """Compatibility wrapper for the legacy interface."""
     print("INFO: Using GPU-accelerated version")
     return predictions_desi_gpu(pred_sightlines, savefile, 
                                 batch_size=128, 

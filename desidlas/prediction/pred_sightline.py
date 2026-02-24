@@ -25,16 +25,16 @@ def save_pred(sightlines, pred, PEAK_THRESH=PEAK_THRESH, level=level, filename=N
     for ii in range(len(sightlines)):
         sightline = sightlines[ii]
         
-        # 跳过空sightline
+        # Skip empty sightlines
         if sightline == [] or sightline is None:
             continue
         
-        # 跳过预测失败的
+        # Skip failed predictions
         if pred[ii] is None:
             continue
         
         try:
-            # 修复：安全获取lam
+            # Safe retrieval of lam
             lam_data = pred[ii]['lam']
             if isinstance(lam_data, np.ndarray):
                 if lam_data.ndim == 2:
@@ -42,10 +42,10 @@ def save_pred(sightlines, pred, PEAK_THRESH=PEAK_THRESH, level=level, filename=N
                 elif lam_data.ndim == 1:
                     lam_analyse = lam_data
                 else:
-                    # 如果是更高维度，取第一个
+                    # If higher-dimensional, take the first
                     lam_analyse = lam_data.flatten()
             else:
-                # 如果是标量或其他，直接使用
+                # If scalar or other, use directly
                 lam_analyse = lam_data
             
             conf        = pred[ii]['conf']
@@ -60,13 +60,13 @@ def save_pred(sightlines, pred, PEAK_THRESH=PEAK_THRESH, level=level, filename=N
                 
         except Exception as e:
             print(f"  Warning: Error analyzing sightline {ii}: {e}")
-            # 调试信息
+            # Debug info
             if pred[ii] is not None:
                 print(f"    lam shape: {pred[ii]['lam'].shape if hasattr(pred[ii]['lam'], 'shape') else type(pred[ii]['lam'])}")
                 print(f"    lam type: {type(pred[ii]['lam'])}")
             continue
 
-    # 创建输出表
+    # Create output table
     if len(rows) == 0:
         out = Table(names=('TARGET_RA','TARGET_DEC','Z_QSO','Z_DLA','TARGETID',
                           'S2N','DLAID','NHI','DLA_CONFIDENCE','NHI_STD','ABSORBER_TYPE'),
@@ -146,7 +146,7 @@ def save_pred_all(sightline_loc,partpre_loc,dlacat_loc):
 '''
 '''
 def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
-    # 顺序版（最稳）
+    # Sequential version (most stable)
     for i in tqdm(range(len(sightlines)), total=len(sightlines)):
         save_pred(sightline_loc[i], partpre_loc[i],
                   PEAK_THRESH=PEAK_THRESH, level=level, filename=dlacat_loc[i])
@@ -154,16 +154,16 @@ def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
 '''
 def save_pred_all(sightline_loc, partpre_loc, dlacat_loc):
     assert len(sightline_loc) == len(partpre_loc) == len(dlacat_loc), \
-        "输入列表长度不一致"
+        "Input list lengths do not match"
 
     for s_path, p_path, out_path in tqdm(
         list(zip(sightline_loc, partpre_loc, dlacat_loc)),
         total=len(sightline_loc)
     ):
-        # 确保输出目录存在
+        # Ensure output directory exists
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
-        # 将预测 npy → 解析为 DLACAT（保持你原有的 save_pred 接口）
+        # Parse prediction npy -> DLACAT (keep original save_pred interface)
         save_pred(s_path, p_path,
                   PEAK_THRESH=PEAK_THRESH,
                   level=level,

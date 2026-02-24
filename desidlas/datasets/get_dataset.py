@@ -27,8 +27,8 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
     dataset: dict, the training set contains flux and 3 labels, the validation set contains flux, lam, 3 labels and DLAs' data.
     """
     dataset = {}
-    count = 0  # 计数处理过的 sightline
-    file_idx = 0  # 文件编号
+    count = 0  # number of processed sightlines
+    file_idx = 0  # file index
 
     for sightline in sightlines:
         wavelength_dlas = [dla.central_wavelength for dla in sightline.dlas]
@@ -58,7 +58,7 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
             }
         else:
             sample_masks = select_samples_pos_neg_ratio(sightline, kernel=kernel, pos_fraction=pos_fraction)
-            # 判断 sample_masks 非空, 这里根据实际类型调整判断方式：
+            # Ensure sample_masks is non-empty; adjust as needed for actual type
             if len(sample_masks) > 0:
                 flux = np.vstack([data_split[0][m] for m in sample_masks])
                 labels_classifier = np.hstack([data_split[1][m] for m in sample_masks])
@@ -72,7 +72,7 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
                 }
 
         count += 1
-        # 达到chunk_size，保存并清空dataset
+        # Reached chunk_size: save and reset dataset
         if count >= chunk_size:
             outpath = f"{output}_{file_idx}.npy"
             np.save(outpath, dataset)
@@ -81,7 +81,7 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
             count = 0
             file_idx += 1
 
-    # 保存剩余未保存的数据
+    # Save remaining data
     if dataset:
         outpath = f"{output}_{file_idx}.npy"
         np.save(outpath, dataset)
