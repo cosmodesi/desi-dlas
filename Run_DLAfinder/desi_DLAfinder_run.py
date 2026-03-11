@@ -36,6 +36,15 @@ def parse_args(options=None):
     parser.add_argument("--rebuild-list", action="store_true",
                         help="Rebuild file list cache even if it exists.")
 
+    parser.add_argument("--list-from-sightlines", action="store_true",
+                        help="Build file list by scanning existing sightlines in sightline-root.")
+    parser.add_argument("--sightline-suffix", type=str, default="-pre-sightlines.npy",
+                        help="Suffix for existing sightline files when list-from-sightlines is set.")
+    parser.add_argument("--pred-suffix", type=str, default="-pre-sightlines-pred.npy",
+                        help="Prediction file suffix when list-from-sightlines is set.")
+    parser.add_argument("--dlacat-suffix", type=str, default="-dlacat.fits",
+                        help="DLA catalog file suffix when list-from-sightlines is set.")
+
     parser.add_argument("--output-layout", choices=["k/j", "k"], default=None,
                         help="Output directory layout relative to sightline root.")
     parser.add_argument("--spectra-pattern", type=str, default="",
@@ -128,6 +137,9 @@ def _build_cache_tag(args):
 
 
 def _discover_files(args, patterns):
+    if args.list_from_sightlines:
+        return _discover_from_sightlines(args)
+
     spectra_root = args.spectra_root
     if not spectra_root:
         raise ValueError("spectra_root is required to build file list.")
@@ -195,6 +207,64 @@ def _discover_files(args, patterns):
         "dlacat": np.array(dlacat_list, dtype=object),
         "group": np.array(group_list, dtype=object),
         "leaf": np.array(leaf_list, dtype=object),
+    }
+
+
+def _discover_from_sightlines(args):
+    sightline_root = args.sightline_root
+    if not sightline_root:
+        raise ValueError("sightline_root is required to build list from sightlines.")
+
+    sightline_list = []
+    pred_list = []
+    dlacat_list = []
+    spectra_list = []
+    truth_list = []
+    zbest_list = []
+    group_list = []
+    leaf_list = []
+
+    suffix = args.sightline_suffix
+    pred_suffix = args.pred_suffix
+    dlacat_suffix = args.dlacat_suffix
+    pred_root = args.scratch_out or sightline_root
+
+    for root, _dirs, files in os.walk(sightline_root):
+        for fname in files:
+            if not fname.endswith(suffix):
+                continue
+            sightline_path = os.path.join(root, fname)
+            rel_dir = os.path.relpath(root, sightline_root)
+
+            pred_name = fname.replace(suffix, pred_suffix)
+            dlacat_name = fname.replace(suffix, dlacat_suffix)
+
+            pred_path = os.path.join(pred_root, rel_dir, pred_name)
+            dlacat_path = os.path.join(pred_root, rel_dir, dlacat_name)
+
+            sightline_list.append(sightline_path)
+            pred_list.append(pred_path)
+            dlacat_list.append(dlacat_path)
+            spectra_list.append("")
+            truth_list.append("")
+            zbest_list.append("")
+            group_list.append("")
+            leaf_list.append("")
+
+    sort_idx = np.argsort(sightline_list)
+    sightline_arr = np.array(sightline_list, dtype=object)[sort_idx]
+    pred_arr = np.array(pred_list, dtype=object)[sort_idx]
+    dlacat_arr = np.array(dlacat_list, dtype=object)[sort_idx]
+
+    return {
+        "spectra": np.array(spectra_list, dtype=object)[sort_idx],
+        "truth": np.array(truth_list, dtype=object)[sort_idx],
+        "zbest": np.array(zbest_list, dtype=object)[sort_idx],
+        "sightline": sightline_arr,
+        "pred": pred_arr,
+        "dlacat": dlacat_arr,
+        "group": np.array(group_list, dtype=object)[sort_idx],
+        "leaf": np.array(leaf_list, dtype=object)[sort_idx],
     }
 
 
@@ -287,6 +357,11 @@ def main():
     sightline_sel = lists["sightline"][start:end]
     pred_sel = lists["pred"][start:end]
     dlacat_sel = lists["dlacat"][start:end]
+
+    if args.generate_sightlines:
+        if args.list_from_sightlines:
+            print("--list-from-sightlines set; skipping sightline generation.")
+            args.generate_sightlines = False
 
     if args.generate_sightlines:
         from desidlas.datasets.get_sightlines import get_sightlines
