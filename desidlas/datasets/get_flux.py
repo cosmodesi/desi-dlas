@@ -47,25 +47,40 @@ def smooth_flux_gpu(flux):
 
 
 def smooth_flux_cpu(flux):
-    """Original CPU version (unchanged)."""
-    flux_matrix = []
-    for sample in flux:
-        smooth3 = signal.medfilt(sample, 3)
-        smooth7 = signal.medfilt(sample, 7)
-        smooth15 = signal.medfilt(sample, 15)
-        flux_matrix.append(np.array([sample, smooth3, smooth7, smooth15]))
-    return np.array(flux_matrix)
+    """Vectorized CPU median smoothing over all windows.
+
+    Input shape is [n_windows, n_pixels]. Output is [n_windows, 4, n_pixels].
+    The previous implementation looped over windows in Python and called
+    medfilt three times per window, which dominates low-SNR prediction time.
+    """
+    flux = np.asarray(flux, dtype=np.float32)
+    smooth3 = signal.medfilt(flux, [1, 3])
+    smooth7 = signal.medfilt(flux, [1, 7])
+    smooth15 = signal.medfilt(flux, [1, 15])
+    return np.stack([flux, smooth3, smooth7, smooth15], axis=1).astype(np.float32, copy=False)
 
 
-def make_dataset(sightline):
-    """Keep the interface unchanged."""
+def make_dataset(sightline, kernel=None, smooth=False):
+    """Build prediction windows for one sightline.
+
+    Parameters
+    ----------
+    kernel
+        Window length. Defaults to the raw-flux kernel.
+    smooth
+        If True, return four channels: raw flux plus median filters 3, 7, 15.
+    """
+    if kernel is None:
+        kernel = defs.kernel
     data_split = split_sightline_into_samples(
         sightline,
         REST_RANGE=defs.REST_RANGE,
-        kernel=defs.kernel,
+        kernel=kernel,
         v=defs.best_v['all'],
     )
     flux = np.vstack([data_split[0]])
+    if smooth:
+        flux = smooth_flux(flux)
     
     input_lam = np.vstack([data_split[5]])
     

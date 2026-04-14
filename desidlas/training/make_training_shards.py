@@ -11,6 +11,7 @@ if REPO_ROOT not in sys.path:
 
 from desidlas.datasets import preprocess
 from desidlas.datasets.get_dataset import make_datasets
+from desidlas.dla_cnn import defs
 
 
 SIGHTLINE_GLOB = "/pscratch/sd/t/tanting/retraining/sightlines/**/*.npy"
@@ -36,7 +37,9 @@ def parse_args():
     parser.add_argument("--pos-sample-kernel-percent", type=float, default=0.3,
                         help="Positive label width as fraction of kernel (all buckets).")
     parser.add_argument("--low-pos-sample-percent", type=float, default=None,
-                        help="Deprecated alias for --pos-sample-kernel-percent.")
+                        help="Positive label width as fraction of kernel for low buckets only.")
+    parser.add_argument("--low-smooth", action="store_true",
+                        help="Write low1/low2 shards as 600x4 raw+median-smoothed inputs.")
     parser.add_argument("--k-start", type=int, default=None, help="Start k (inclusive).")
     parser.add_argument("--k-end", type=int, default=None, help="End k (exclusive).")
     parser.add_argument("--workers", type=int, default=max(1, cpu_count()))
@@ -68,7 +71,8 @@ def _prune_empty_shards(prefix):
 
 def _process_file(args):
     (f, out_root, chunk_size, low_min_s2n, pos_sample_kernel_percent, low_mid_s2n,
-     low_pos_frac, mid_pos_frac, no_s2n_split) = args
+     low_pos_frac, mid_pos_frac, no_s2n_split, low_smooth,
+     low_pos_sample_kernel_percent) = args
     sightlines = np.load(f, allow_pickle=True)
 
     if no_s2n_split:
@@ -129,30 +133,35 @@ def _process_file(args):
         out_prefix = os.path.join(out_root, "low1", base)
         make_datasets(
             low1,
+            kernel=defs.smooth_kernel if low_smooth else defs.kernel,
             output=out_prefix,
             validate=False,
             chunk_size=chunk_size,
             pos_fraction=low_pos_frac,
-            pos_sample_kernel_percent=pos_sample_kernel_percent,
+            pos_sample_kernel_percent=low_pos_sample_kernel_percent,
+            smooth=low_smooth,
         )
         _prune_empty_shards(out_prefix)
     if low2:
         out_prefix = os.path.join(out_root, "low2", base)
         make_datasets(
             low2,
+            kernel=defs.smooth_kernel if low_smooth else defs.kernel,
             output=out_prefix,
             validate=False,
             chunk_size=chunk_size,
             pos_fraction=low_pos_frac,
-            pos_sample_kernel_percent=pos_sample_kernel_percent,
+            pos_sample_kernel_percent=low_pos_sample_kernel_percent,
+            smooth=low_smooth,
         )
         _prune_empty_shards(out_prefix)
 
 
 def main():
     args = parse_args()
-    if args.low_pos_sample_percent is not None:
-        args.pos_sample_kernel_percent = args.low_pos_sample_percent
+    low_pos_sample_kernel_percent = args.low_pos_sample_percent
+    if low_pos_sample_kernel_percent is None:
+        low_pos_sample_kernel_percent = 0.2 if args.low_smooth else args.pos_sample_kernel_percent
     os.makedirs(args.out_root, exist_ok=True)
     if args.no_s2n_split:
         pass
@@ -170,7 +179,8 @@ def main():
 
     tasks = [
         (f, args.out_root, args.chunk_size, args.low_min_s2n, args.pos_sample_kernel_percent,
-         args.low_mid_s2n, args.low_pos_frac, args.mid_pos_frac, args.no_s2n_split)
+         args.low_mid_s2n, args.low_pos_frac, args.mid_pos_frac, args.no_s2n_split,
+         args.low_smooth, low_pos_sample_kernel_percent)
         for f in sorted(files)
     ]
     if args.workers <= 1:

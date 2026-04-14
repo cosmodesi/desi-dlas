@@ -25,10 +25,38 @@ os.environ.setdefault("MKL_NUM_THREADS", "2")
 from desidlas.datasets.get_flux import make_dataset
 from desidlas.training.parameterset import parameter_names, parameters
 from desidlas.training.model import build_model
+from desidlas.dla_cnn import defs
 
 # ---- Model constants (global) ----
-MATRIX_SIZE = {'high': 1, 'mid': 1, 'low': 1}
-INPUT_SIZE  = {'high': 400, 'mid': 400, 'low': 400}
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value == "1"
+
+
+def _low_input_config(bucket):
+    bucket_env = bucket.upper()
+    smooth = _env_bool(
+        f"DESIDLAS_{bucket_env}_SMOOTH",
+        _env_bool("DESIDLAS_LOW_SMOOTH", False),
+    )
+    input_size = int(os.environ.get(
+        f"DESIDLAS_{bucket_env}_INPUT_SIZE",
+        os.environ.get("DESIDLAS_LOW_INPUT_SIZE", defs.smooth_kernel if smooth else defs.kernel),
+    ))
+    matrix_size = int(os.environ.get(
+        f"DESIDLAS_{bucket_env}_MATRIX_SIZE",
+        os.environ.get("DESIDLAS_LOW_MATRIX_SIZE", 4 if smooth else 1),
+    ))
+    return {"input_size": input_size, "matrix_size": matrix_size, "smooth": matrix_size > 1}
+
+
+MODEL_INPUT = {
+    'low1': _low_input_config('low1'),
+    'low2': _low_input_config('low2'),
+    'mid': {'input_size': defs.kernel, 'matrix_size': 1, 'smooth': False},
+}
 CKPT = {
     'low1': os.environ.get(
         'DESIDLAS_CKPT_LOW1',
@@ -122,7 +150,11 @@ def _infer_bucket_stream(lines, index_list, model_key, INPUT_SIZE, matrix_size,
         total_runs = 0
         
         for i in tqdm(index_list, desc=f"{model_key.upper()}", leave=False):
-            flux_i, lam_i = make_dataset(lines[i])
+            flux_i, lam_i = make_dataset(
+                lines[i],
+                kernel=INPUT_SIZE,
+                smooth=(matrix_size > 1),
+            )
             if flux_i is None or flux_i.size == 0:
                 results[i] = None
                 continue
@@ -224,25 +256,32 @@ def pred_file_fast(npy_path, savefile):
             idx_mid.append(i)
     
     print(f"[FAST] Groups: low1={len(idx_low1)}, low2={len(idx_low2)}, mid={len(idx_mid)}", flush=True)
+    print(
+        f"[FAST] Input config: "
+        f"low1={MODEL_INPUT['low1']['input_size']}x{MODEL_INPUT['low1']['matrix_size']}, "
+        f"low2={MODEL_INPUT['low2']['input_size']}x{MODEL_INPUT['low2']['matrix_size']}, "
+        f"mid={MODEL_INPUT['mid']['input_size']}x{MODEL_INPUT['mid']['matrix_size']}",
+        flush=True,
+    )
 
     # Streaming batch processing
     out_map = {}
     if idx_low1:
         out_map.update(_infer_bucket_stream(
             lines, idx_low1, 'low1',
-            INPUT_SIZE['low'], MATRIX_SIZE['low'], CKPT['low1'],
+            MODEL_INPUT['low1']['input_size'], MODEL_INPUT['low1']['matrix_size'], CKPT['low1'],
             batch_size=16384
         ))
     if idx_low2:
         out_map.update(_infer_bucket_stream(
             lines, idx_low2, 'low2',
-            INPUT_SIZE['low'], MATRIX_SIZE['low'], CKPT['low2'],
+            MODEL_INPUT['low2']['input_size'], MODEL_INPUT['low2']['matrix_size'], CKPT['low2'],
             batch_size=16384
         ))
     if idx_mid:
         out_map.update(_infer_bucket_stream(
             lines, idx_mid, 'mid',
-            INPUT_SIZE['mid'], MATRIX_SIZE['mid'], CKPT['mid'],
+            MODEL_INPUT['mid']['input_size'], MODEL_INPUT['mid']['matrix_size'], CKPT['mid'],
             batch_size=16384
         ))
 

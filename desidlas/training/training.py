@@ -349,6 +349,14 @@ if __name__ == '__main__':
     parser.add_argument('--lr-min-ratio', type=float, default=0.1, help='Minimum LR ratio for cosine decay.')
     parser.add_argument('--clip-norm', type=float, default=0.0, help='Global grad norm clip (0 disables).')
     parser.add_argument('--shard-sample', type=int, default=None, help='Number of shard files to sample per buffer load.')
+    parser.add_argument('--coldensity-center', type=float, default=None,
+                        help='Predict logNHI as an offset from this value, but still output absolute logNHI.')
+    parser.add_argument('--classifier-loss-weight', type=float, default=None,
+                        help='Weight for classifier loss in the joint objective.')
+    parser.add_argument('--offset-loss-weight', type=float, default=None,
+                        help='Weight for offset loss in the joint objective.')
+    parser.add_argument('--coldensity-loss-weight', type=float, default=None,
+                        help='Weight for column-density loss in the joint objective.')
     args = vars(parser.parse_args())
 
     RUN_SINGLE_ITERATION = not args['hyperparamsearch']
@@ -417,6 +425,14 @@ if __name__ == '__main__':
         hyperparameters['lr_min_ratio'] = args['lr_min_ratio']
     if args['clip_norm'] and args['clip_norm'] > 0:
         hyperparameters['clip_norm'] = args['clip_norm']
+    if args['coldensity_center'] is not None:
+        hyperparameters['coldensity_center'] = args['coldensity_center']
+    if args['classifier_loss_weight'] is not None:
+        hyperparameters['classifier_loss_weight'] = args['classifier_loss_weight']
+    if args['offset_loss_weight'] is not None:
+        hyperparameters['offset_loss_weight'] = args['offset_loss_weight']
+    if args['coldensity_loss_weight'] is not None:
+        hyperparameters['coldensity_loss_weight'] = args['coldensity_loss_weight']
 
     #start the training
     (best_accuracy, last_accuracy, last_objective, best_offset_rmse, last_offset_rmse, best_coldensity_rmse,

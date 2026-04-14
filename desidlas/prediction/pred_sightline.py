@@ -53,7 +53,17 @@ def save_pred(sightlines, pred, PEAK_THRESH=PEAK_THRESH, level=level, filename=N
             offset      = pred[ii]['offset']
             coldensity  = pred[ii]['coldensity']
 
-            tab = analyze_pred(sightline, classifier, conf, offset, coldensity, PEAK_THRESH, lam_analyse)
+            tab = analyze_pred(
+                sightline,
+                classifier,
+                conf,
+                offset,
+                coldensity,
+                PEAK_THRESH,
+                lam_analyse,
+                level=level,
+                use_conf_level=os.environ.get("DESIDLAS_USE_CONF_LEVEL", "0") == "1",
+            )
             
             for row in tab:
                 rows.append({name: row[name] for name in tab.colnames})

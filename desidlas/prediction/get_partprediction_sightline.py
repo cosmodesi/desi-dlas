@@ -7,7 +7,7 @@ import tensorflow as tf
 import timeit
 from tensorflow.python.framework import ops
 from desidlas.datasets.get_flux import make_dataset
-from desidlas.parameters import kernel
+from desidlas.dla_cnn import defs
 from tqdm import tqdm
 ops.reset_default_graph()
 
@@ -83,8 +83,32 @@ def predictions_ann(hyperparameters, INPUT_SIZE,matrix_size,flux, checkpoint_fil
 def predictions_desi(pred_sightlines,savefile):
 
     #parameters
-    matrix_size={'high':1,'mid':1,'low1':1,'low2':1}
-    INPUT_SIZE={'high':400,'mid':400,'low1':400,'low2':400}
+    def _env_bool(name, default=False):
+        value = os.environ.get(name)
+        if value is None:
+            return default
+        return value == "1"
+
+    def _low_input_config(bucket):
+        bucket_env = bucket.upper()
+        smooth = _env_bool(
+            f"DESIDLAS_{bucket_env}_SMOOTH",
+            _env_bool("DESIDLAS_LOW_SMOOTH", False),
+        )
+        input_size = int(os.environ.get(
+            f"DESIDLAS_{bucket_env}_INPUT_SIZE",
+            os.environ.get("DESIDLAS_LOW_INPUT_SIZE", defs.smooth_kernel if smooth else defs.kernel),
+        ))
+        matrix_size = int(os.environ.get(
+            f"DESIDLAS_{bucket_env}_MATRIX_SIZE",
+            os.environ.get("DESIDLAS_LOW_MATRIX_SIZE", 4 if smooth else 1),
+        ))
+        return input_size, matrix_size
+
+    low1_input_size, low1_matrix_size = _low_input_config("low1")
+    low2_input_size, low2_matrix_size = _low_input_config("low2")
+    matrix_size={'high':1,'mid':1,'low1':low1_matrix_size,'low2':low2_matrix_size}
+    INPUT_SIZE={'high':defs.kernel,'mid':defs.kernel,'low1':low1_input_size,'low2':low2_input_size}
 
     checkpoint_filename={
         'high': os.environ.get(
@@ -133,7 +157,6 @@ def predictions_desi(pred_sightlines,savefile):
     #4 empty list to record number of TP,TN,FP,FN samples
 
     for sightline in tqdm(r.ravel()):
-        flux,lam=make_dataset(sightline)
         if sightline.s2n<1.5:
             model='low1'
             for k in range(0,len(parameter_names)):
@@ -146,6 +169,7 @@ def predictions_desi(pred_sightlines,savefile):
             model='mid'
             for k in range(0,len(parameter_names)):
                 hyperparameters[parameter_names[k]] = parameters[k][0]
+        flux,lam=make_dataset(sightline, kernel=INPUT_SIZE[model], smooth=(matrix_size[model] > 1))
         '''
         elif sightline.s2n<6:
             #model='mid'

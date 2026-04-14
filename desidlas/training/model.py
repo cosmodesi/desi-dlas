@@ -277,7 +277,16 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
     y_fc4_2 = tf.add(tf.matmul(h_fc2_2_drop, W_fc3_2), b_fc3_2)
     y_nn_offset = tf.reshape(y_fc4_2, [-1], name='y_nn_offset')
     y_fc4_3 = tf.add(tf.matmul(h_fc2_3_drop, W_fc3_3), b_fc3_3)
-    y_nn_coldensity = tf.reshape(y_fc4_3, [-1], name='y_nn_coldensity')
+    coldensity_center = float(hyperparameters.get('coldensity_center', 0.0))
+    y_nn_coldensity_raw = tf.reshape(y_fc4_3, [-1])
+    y_nn_coldensity = tf.identity(y_nn_coldensity_raw + coldensity_center, name='y_nn_coldensity')
+
+    l2_loss = l2_regularization_penalty * (
+        tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) + tf.nn.l2_loss(W_conv3) +
+        tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1) + tf.nn.l2_loss(W_fc2_2) +
+        tf.nn.l2_loss(W_fc2_3) + tf.nn.l2_loss(W_fc3_1) + tf.nn.l2_loss(W_fc3_2) +
+        tf.nn.l2_loss(W_fc3_3)
+    )
 
     # Train and Evaluate the model
     use_focal = bool(hyperparameters.get('use_focal', False))
@@ -289,33 +298,27 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
         p_t = tf.where(tf.equal(label_classifier, 1.0), p, 1.0 - p)
         alpha_t = tf.where(tf.equal(label_classifier, 1.0), alpha, 1.0 - alpha)
         focal = alpha_t * tf.pow(1.0 - p_t, gamma) * ce
-        loss_classifier = tf.add(
-            focal,
-            l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
-                                         tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
-            name='loss_classifier',
-        )
+        loss_classifier = tf.identity(tf.reduce_mean(input_tensor=focal), name='loss_classifier')
     else:
         pos_weight = hyperparameters.get('pos_weight', 1.0)
-        loss_classifier = tf.add(tf.nn.weighted_cross_entropy_with_logits(
-                                    logits=y_nn_classifier, labels=label_classifier, pos_weight=pos_weight),
-                                 l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
-                                                              tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1)),
-                                 name='loss_classifier')
+        classifier_ce = tf.nn.weighted_cross_entropy_with_logits(
+            logits=y_nn_classifier,
+            labels=label_classifier,
+            pos_weight=pos_weight,
+        )
+        loss_classifier = tf.identity(tf.reduce_mean(input_tensor=classifier_ce), name='loss_classifier')
     pos_mask = tf.cast(tf.equal(label_classifier, 1.0), tf.float32)
     pos_count = tf.reduce_sum(input_tensor=pos_mask) + 1e-6
     offset_residual = tf.square(y_nn_offset - label_offset)
-    loss_offset_regression = tf.add(tf.reduce_sum(input_tensor=offset_residual * pos_mask) / pos_count,
-                                    l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
-                                                                 tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_2)),
-                                    name='loss_offset_regression')
+    loss_offset_regression = tf.identity(
+        tf.reduce_sum(input_tensor=offset_residual * pos_mask) / pos_count,
+        name='loss_offset_regression',
+    )
     epsilon = 1e-6 # the small value safe from 32-bit floating point rounding error, this is used in column density loss fucntion
     coldensity_residual = tf.square(y_nn_coldensity - label_coldensity)
     coldensity_weight = tf.compat.v1.math.divide(label_coldensity, label_coldensity + epsilon)
     loss_coldensity_regression = tf.reduce_sum(
-        input_tensor=tf.multiply(coldensity_residual, coldensity_weight) * pos_mask) / pos_count + \
-        l2_regularization_penalty * (tf.nn.l2_loss(W_conv1) + tf.nn.l2_loss(W_conv2) +
-                                     tf.nn.l2_loss(W_fc1) + tf.nn.l2_loss(W_fc2_1))
+        input_tensor=tf.multiply(coldensity_residual, coldensity_weight) * pos_mask) / pos_count
     loss_coldensity_regression = tf.identity(loss_coldensity_regression, name='loss_coldensity_regression')
 
     lr = tf.cast(learning_rate, tf.float32)
@@ -332,9 +335,23 @@ def build_model(hyperparameters,INPUT_SIZE,matrix_size):
 
     optimizer = tf.compat.v1.train.AdamOptimizer(learning_rate=lr)
     
-    #combine three loss functions(for classification, offset and column density) to minimize
-    cost_all_samples_lossfns_AB = loss_classifier + loss_offset_regression
-    cost_pos_samples_lossfns_ABC = loss_classifier + loss_offset_regression + loss_coldensity_regression
+    classifier_loss_weight = float(hyperparameters.get('classifier_loss_weight', 1.0))
+    offset_loss_weight = float(hyperparameters.get('offset_loss_weight', 1.0))
+    coldensity_loss_weight = float(hyperparameters.get('coldensity_loss_weight', 1.0))
+
+    # Combine scalar losses. Keep L2 separate so it is applied once, not once
+    # per sample and once per task.
+    cost_all_samples_lossfns_AB = (
+        classifier_loss_weight * loss_classifier +
+        offset_loss_weight * loss_offset_regression +
+        l2_loss
+    )
+    cost_pos_samples_lossfns_ABC = (
+        classifier_loss_weight * loss_classifier +
+        offset_loss_weight * loss_offset_regression +
+        coldensity_loss_weight * loss_coldensity_regression +
+        l2_loss
+    )
     
     #minimize the total loss fucntion
     clip_norm = float(hyperparameters.get('clip_norm', 0.0))

@@ -11,7 +11,7 @@ best_v = defs.best_v
 
 def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['all'],
                   output=None, validate=True, chunk_size=100, pos_fraction=0.5,
-                  pos_sample_kernel_percent=0.3):
+                  pos_sample_kernel_percent=0.3, smooth=False):
     """
     Generate training set or validation set for DESI.
 
@@ -21,6 +21,8 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
     validate: bool, optional, this decides whether to add wavelength in the dataset
     chunk_size: int, optional, how many sightlines to save once
     pos_sample_kernel_percent: float, optional, positive label width as fraction of kernel.
+    smooth: bool, optional, if True store [raw, smooth3, smooth7, smooth15]
+        channels for each window.
 
     Returns
     -----------------------------------------------
@@ -43,6 +45,8 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
         
         if validate:
             flux = np.vstack([data_split[0]])
+            if smooth:
+                flux = smooth_flux(flux)
             labels_classifier = np.hstack([data_split[1]])
             labels_offset = np.hstack([data_split[2]])
             col_density = np.hstack([data_split[3]])
@@ -61,6 +65,8 @@ def make_datasets(sightlines, kernel=kernel, REST_RANGE=REST_RANGE, v=best_v['al
             # Ensure sample_masks is non-empty; adjust as needed for actual type
             if len(sample_masks) > 0:
                 flux = np.vstack([data_split[0][m] for m in sample_masks])
+                if smooth:
+                    flux = smooth_flux(flux)
                 labels_classifier = np.hstack([data_split[1][m] for m in sample_masks])
                 labels_offset = np.hstack([data_split[2][m] for m in sample_masks])
                 col_density = np.hstack([data_split[3][m] for m in sample_masks])
@@ -105,16 +111,17 @@ def smooth_flux(flux):
     flux_matrix:list, 2-dimension flux data after smoothing
     
     """
-    flux_matrix=[]
-    for sample in flux:
-        smooth3=signal.medfilt(sample,3)
-        smooth7=signal.medfilt(sample,7)
-        smooth15=signal.medfilt(sample,15)
-        flux_matrix.append(np.array([sample,smooth3,smooth7,smooth15]))
-    return flux_matrix
+    flux = np.asarray(flux, dtype=np.float32)
+    smooth3 = signal.medfilt(flux, [1, 3])
+    smooth7 = signal.medfilt(flux, [1, 7])
+    smooth15 = signal.medfilt(flux, [1, 15])
+    return np.stack([flux, smooth3, smooth7, smooth15], axis=1).astype(np.float32, copy=False)
 
 #smooth flux for low S/N sightlines
-def make_smoothdatasets(sightlines,kernel=smooth_kernel, REST_RANGE=REST_RANGE, v=best_v['all'], output=None, validate=True):
+def make_smoothdatasets(sightlines, kernel=smooth_kernel, REST_RANGE=REST_RANGE,
+                        v=best_v['all'], output=None, validate=True,
+                        chunk_size=100, pos_fraction=0.5,
+                        pos_sample_kernel_percent=0.2):
     """
     Generate smoothed training set or validation set for DESI.
     
@@ -128,28 +135,15 @@ def make_smoothdatasets(sightlines,kernel=smooth_kernel, REST_RANGE=REST_RANGE, 
     dataset:dict, the training set contains smoothed flux and 3 labels, the validation set contains smoothed flux, lam, 3 labels and DLAs' data.
     
     """
-    dataset={}
-    for sightline in sightlines:
-        wavelength_dlas=[dla.central_wavelength for dla in sightline.dlas]
-        coldensity_dlas=[dla.col_density for dla in sightline.dlas]   
-        label_sightline(sightline, kernel=kernel, REST_RANGE=REST_RANGE)
-        data_split=split_sightline_into_samples(sightline, REST_RANGE=REST_RANGE, kernel=kernel,v=v)
-        if validate:
-            flux=np.vstack([data_split[0]])
-            labels_classifier=np.hstack([data_split[1]])
-            labels_offset=np.hstack([data_split[2]])
-            col_density=np.hstack([data_split[3]])
-            lam=np.vstack([data_split[4]])
-            flux_matrix=smooth_flux(flux)
-            dataset[sightline.id]={'FLUX':flux_matrix,'lam':lam,'labels_classifier':  labels_classifier, 'labels_offset':labels_offset , 'col_density': col_density,'wavelength_dlas':wavelength_dlas,'coldensity_dlas':coldensity_dlas} 
-        else:
-            sample_masks=select_samples_50p_pos_neg(sightline,kernel=kernel)
-            if sample_masks !=[]:
-                flux=np.vstack([data_split[0][m] for m in sample_masks])
-                labels_classifier=np.hstack([data_split[1][m] for m in sample_masks])
-                labels_offset=np.hstack([data_split[2][m] for m in sample_masks])
-                col_density=np.hstack([data_split[3][m] for m in sample_masks])
-                flux_matrix=smooth_flux(flux)
-                dataset[sightline.id]={'FLUX':flux_matrix,'labels_classifier':labels_classifier,'labels_offset':labels_offset,'col_density': col_density}
-    np.save(output,dataset)
-    return dataset
+    return make_datasets(
+        sightlines,
+        kernel=kernel,
+        REST_RANGE=REST_RANGE,
+        v=v,
+        output=output,
+        validate=validate,
+        chunk_size=chunk_size,
+        pos_fraction=pos_fraction,
+        pos_sample_kernel_percent=pos_sample_kernel_percent,
+        smooth=True,
+    )

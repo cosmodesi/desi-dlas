@@ -15,8 +15,39 @@ import sys
 sys.path.append('/global/cfs/cdirs/desi/users/jqzou')
 
 from desidlas.datasets.get_flux import make_dataset
-from desidlas.parameters import kernel
+from desidlas.dla_cnn import defs
 from desidlas.training.parameterset import parameter_names, parameters
+
+
+def _env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value == "1"
+
+
+def _low_input_config(bucket):
+    bucket_env = bucket.upper()
+    smooth = _env_bool(
+        f"DESIDLAS_{bucket_env}_SMOOTH",
+        _env_bool("DESIDLAS_LOW_SMOOTH", False),
+    )
+    input_size = int(os.environ.get(
+        f"DESIDLAS_{bucket_env}_INPUT_SIZE",
+        os.environ.get("DESIDLAS_LOW_INPUT_SIZE", defs.smooth_kernel if smooth else defs.kernel),
+    ))
+    matrix_size = int(os.environ.get(
+        f"DESIDLAS_{bucket_env}_MATRIX_SIZE",
+        os.environ.get("DESIDLAS_LOW_MATRIX_SIZE", 4 if smooth else 1),
+    ))
+    return {"kernel": input_size, "matrix_size": matrix_size, "smooth": matrix_size > 1}
+
+
+MODEL_INPUT = {
+    'low1': _low_input_config('low1'),
+    'low2': _low_input_config('low2'),
+    'mid': {'kernel': defs.kernel, 'matrix_size': 1, 'smooth': False},
+}
 
 
 class Timer:
@@ -220,14 +251,6 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
                 continue
             
             try:
-                flux, lam = make_dataset(sightline)
-                
-                # Fix lam shape
-                if len(lam.shape) == 2:
-                    lam = lam[0]
-                
-                n_windows = flux.shape[0]
-                
                 # Classify by SNR
                 if hasattr(sightline, 's2n'):
                     if sightline.s2n < 1.5:
@@ -238,6 +261,19 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
                         model_type = 'mid'
                 else:
                     model_type = 'mid'
+
+                input_cfg = MODEL_INPUT[model_type]
+                flux, lam = make_dataset(
+                    sightline,
+                    kernel=input_cfg['kernel'],
+                    smooth=input_cfg['smooth'],
+                )
+                
+                # Fix lam shape
+                if len(lam.shape) == 2:
+                    lam = lam[0]
+                
+                n_windows = flux.shape[0]
                 
                 all_flux[model_type].append(flux)
                 all_metadata[model_type].append({
@@ -264,7 +300,11 @@ def pred_sightline_batch_gpu(sightlines_batch, model_gpu, monitor, max_windows_p
         total_windows = flux_combined.shape[0]
         metadata_list = all_metadata[model_type]
         
-        print(f"    {model_type.upper()} SNR: {len(metadata_list)} sightlines, {total_windows} windows")
+        cfg = MODEL_INPUT[model_type]
+        print(
+            f"    {model_type.upper()} SNR: {len(metadata_list)} sightlines, "
+            f"{total_windows} windows, input={cfg['kernel']}x{cfg['matrix_size']}"
+        )
         
         # Step 3: GPU inference in sub-batches
         all_pred = []

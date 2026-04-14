@@ -54,7 +54,10 @@ def compute_peaks(sightline,PEAK_THRESH):
         #print(sightline.id,np.amax(smooth_conv_sum))
     return sightline
 
-def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH,lam_analyse):
+def analyze_pred(sightline, pred, conf, offset, coldensity, PEAK_THRESH, lam_analyse,
+                 level=None, use_conf_level=False):
+    if use_conf_level and level is not None:
+        pred = (conf >= level).astype(pred.dtype, copy=False)
     for i in range(0,len(pred)):#delete pred=0
         if (pred[i]==0):#or(real_classifier[i]==-1):
             offset[i]=0
@@ -75,7 +78,6 @@ def analyze_pred(sightline,pred,conf, offset, coldensity,PEAK_THRESH,lam_analyse
         dla_tbl.add_row((sightline.ra,sightline.dec,sightline.z_qso,float(z_dla),sightline.id,sightline.s2n,str(sightline.id)+'00'+str(jj),float(mean_col_density_prediction),min(1.0,float(sightline.prediction.offset_conv_sum[peak])),float(std_col_density_prediction),absorber_type))
         
     return dla_tbl
-
 
 
 
