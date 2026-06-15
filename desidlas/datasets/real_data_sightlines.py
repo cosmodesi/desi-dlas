@@ -60,8 +60,8 @@ def preprocess_sightlines(sightlines, qsocat, v=44735, out_path=None):
 
     for i in tqdm(range(len(sightlines))):
         sightline = sightlines[i]
-        assert sightline.id == qsocat[i]["TARGETID"]
         if sightline != []:
+            assert sightline.id == qsocat[i]["TARGETID"]
             sightline.s2n = preprocess.estimate_s2n(sightline)
             if sightline.s2n > 0:
                 preprocess.normalize(sightline, 10**sightline.loglam, sightline.flux)
@@ -175,9 +175,15 @@ def make_desi_data_sightlines(
     print(f"{release} {survey} {program} {group} {pixel}, {len(qsocat)} spectra")
 
     sightlines = []
+    missing_targetids = []
     for row in qsocat:
         targetid = row["TARGETID"]
-        sightline = specs.get_sightline(targetid, camera="all", rebin=False, normalize=False)
+        try:
+            sightline = specs.get_sightline(targetid, camera="all", rebin=False, normalize=False)
+        except KeyError:
+            sightlines.append([])
+            missing_targetids.append(targetid)
+            continue
         assert sightline.id == targetid
         sightline.z_qso = float(row["Z"])
         sightline.spectype = str(row["SPECTYPE"])
@@ -185,6 +191,11 @@ def make_desi_data_sightlines(
         sightlines.append(sightline)
 
     assert len(sightlines) == len(qsocat)
+    if missing_targetids:
+        print(
+            f"Missing {len(missing_targetids)} of {len(qsocat)} catalog TARGETIDs in coadd "
+            f"for pixel {pixel}; first missing TARGETID={missing_targetids[0]}"
+        )
     print(f"Extracting sightlines time: {time.time() - start_time} seconds")
     np.save(raw_path, sightlines)
 
