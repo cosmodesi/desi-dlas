@@ -59,6 +59,16 @@ def parse_args(options=None):
                         help="Prediction filename pattern (use {id}).")
     parser.add_argument("--dlacat-pattern", type=str, default="",
                         help="DLA catalog filename pattern (use {id}).")
+    parser.add_argument("--qso-catalog", type=str, default="",
+                        help="Real-data QSO catalog. When set for data, use the old catalog-driven sightline flow.")
+    parser.add_argument("--use-bal", action="store_true",
+                        help="For real data with --qso-catalog, require both BAL and redshift selections.")
+    parser.add_argument("--z-min", type=float, default=2.1,
+                        help="Minimum QSO redshift for real-data sightline generation.")
+    parser.add_argument("--z-max", type=float, default=5.8,
+                        help="Maximum QSO redshift for real-data sightline generation.")
+    parser.add_argument("--skip-realdata-aux", action="store_true",
+                        help="For real data, skip GP MAT and per-pixel process catalogs.")
 
     parser.add_argument("--value", type=int, default=0,
                         help="Start index in the file list.")
@@ -76,6 +86,8 @@ def parse_args(options=None):
                         help="Generate sightlines if missing.")
     parser.add_argument("--force-sightlines", action="store_true",
                         help="Regenerate sightlines even if they exist.")
+    parser.add_argument("--sightlines-only", action="store_true",
+                        help="Stop after sightline generation.")
     parser.add_argument("--cpu-only", action="store_true",
                         help="Disable GPU for prediction.")
     parser.add_argument("--stack-dlacat", action="store_true",
@@ -107,13 +119,24 @@ def _default_patterns(data_type: str):
         }
     return {
         "output_layout": "k",
-        "spectra_pattern": "spectra-main-dark-{id}.fits.gz",
+        "spectra_pattern": "coadd-{survey}-{program}-{id}.fits",
         "zbest_pattern": "zbest-16-{id}.fits",
         "truth_pattern": "",
-        "sightline_pattern": "{id}-pre-sightlines.npy",
-        "pred_pattern": "{id}-pre-sightlines-pred.npy",
-        "dlacat_pattern": "{id}-dlacat.fits",
+        "sightline_pattern": "{release}-{survey}-{program}-{group}-{id}-pre-sightlines.npy",
+        "pred_pattern": "{release}-{survey}-{program}-{group}-{id}-pre-sightlines-pred.npy",
+        "dlacat_pattern": "{release}-{survey}-{program}-{group}-{id}-dlacat.fits",
     }
+
+
+def _format_pattern(pattern, args, leaf, group):
+    return pattern.format(
+        id=leaf,
+        group=group,
+        release=args.release,
+        survey=args.survey,
+        program=args.program,
+        version=args.version,
+    )
 
 
 def _make_output_path(root, layout, group, leaf, filename):
@@ -131,14 +154,18 @@ def _build_cache_tag(args):
     for value in (args.release, args.survey, args.program, args.version):
         if value:
             parts.append(value)
+    if args.data_type == "data" and getattr(args, "qso_catalog", "") and not getattr(args, "list_from_sightlines", False):
+        parts.append("qso")
     if not parts:
         return "default"
     return "_".join(parts)
 
 
 def _discover_files(args, patterns):
-    if args.list_from_sightlines:
+    if getattr(args, "list_from_sightlines", False):
         return _discover_from_sightlines(args)
+    if args.data_type == "data" and getattr(args, "qso_catalog", ""):
+        return _discover_real_data_from_qso_catalog(args, patterns)
 
     spectra_root = args.spectra_root
     if not spectra_root:
@@ -162,29 +189,37 @@ def _discover_files(args, patterns):
             if not os.path.isdir(leaf_path):
                 continue
 
-            spectra_name = patterns["spectra_pattern"].format(id=leaf)
+            spectra_name = _format_pattern(patterns["spectra_pattern"], args, leaf, group)
             spectra_path = os.path.join(leaf_path, spectra_name)
             if not os.path.exists(spectra_path):
                 continue
 
-            zbest_name = patterns["zbest_pattern"].format(id=leaf) if patterns["zbest_pattern"] else ""
+            zbest_name = (
+                _format_pattern(patterns["zbest_pattern"], args, leaf, group)
+                if patterns["zbest_pattern"]
+                else ""
+            )
             zbest_path = os.path.join(leaf_path, zbest_name) if zbest_name else ""
 
-            truth_name = patterns["truth_pattern"].format(id=leaf) if patterns["truth_pattern"] else ""
+            truth_name = (
+                _format_pattern(patterns["truth_pattern"], args, leaf, group)
+                if patterns["truth_pattern"]
+                else ""
+            )
             truth_path = os.path.join(leaf_path, truth_name) if truth_name else ""
 
-            sightline_name = patterns["sightline_pattern"].format(id=leaf)
+            sightline_name = _format_pattern(patterns["sightline_pattern"], args, leaf, group)
             sightline_path = _make_output_path(
                 args.sightline_root, patterns["output_layout"], group, leaf, sightline_name
             )
 
             pred_root = args.scratch_out or args.sightline_root
-            pred_name = patterns["pred_pattern"].format(id=leaf)
+            pred_name = _format_pattern(patterns["pred_pattern"], args, leaf, group)
             pred_path = _make_output_path(
                 pred_root, patterns["output_layout"], group, leaf, pred_name
             )
 
-            dlacat_name = patterns["dlacat_pattern"].format(id=leaf)
+            dlacat_name = _format_pattern(patterns["dlacat_pattern"], args, leaf, group)
             dlacat_path = _make_output_path(
                 pred_root, patterns["output_layout"], group, leaf, dlacat_name
             )
@@ -197,6 +232,64 @@ def _discover_files(args, patterns):
             dlacat_list.append(dlacat_path)
             group_list.append(group)
             leaf_list.append(leaf)
+
+    return {
+        "spectra": np.array(spectra_list, dtype=object),
+        "truth": np.array(truth_list, dtype=object),
+        "zbest": np.array(zbest_list, dtype=object),
+        "sightline": np.array(sightline_list, dtype=object),
+        "pred": np.array(pred_list, dtype=object),
+        "dlacat": np.array(dlacat_list, dtype=object),
+        "group": np.array(group_list, dtype=object),
+        "leaf": np.array(leaf_list, dtype=object),
+    }
+
+
+def _discover_real_data_from_qso_catalog(args, patterns):
+    if not args.spectra_root:
+        raise ValueError("spectra_root is required to build real-data sightlines from a QSO catalog.")
+
+    from desidlas.datasets.real_data_sightlines import healpix_group, prepare_qso_catalog
+
+    qsos = prepare_qso_catalog(args.qso_catalog, z_min=args.z_min, z_max=args.z_max)
+    pixels = np.unique(qsos["HPXPIXEL"])
+
+    spectra_list = []
+    truth_list = []
+    zbest_list = []
+    sightline_list = []
+    pred_list = []
+    dlacat_list = []
+    group_list = []
+    leaf_list = []
+
+    pred_root = args.scratch_out or args.sightline_root
+    for pixel in sorted(int(p) for p in pixels):
+        group = healpix_group(pixel)
+        leaf = str(pixel)
+        spectra_name = _format_pattern(patterns["spectra_pattern"], args, leaf, group)
+        spectra_path = os.path.join(args.spectra_root, group, leaf, spectra_name)
+        if not os.path.exists(spectra_path):
+            print(f"Missing spectra file, skipping pixel {pixel}: {spectra_path}")
+            continue
+
+        sightline_name = _format_pattern(patterns["sightline_pattern"], args, leaf, group)
+        pred_name = _format_pattern(patterns["pred_pattern"], args, leaf, group)
+        dlacat_name = _format_pattern(patterns["dlacat_pattern"], args, leaf, group)
+
+        # Preserve the old real-data layout: sightline_root/<pixel>/<files>.
+        sightline_path = os.path.join(args.sightline_root, leaf, sightline_name)
+        pred_path = os.path.join(pred_root, leaf, pred_name)
+        dlacat_path = os.path.join(pred_root, leaf, dlacat_name)
+
+        spectra_list.append(spectra_path)
+        truth_list.append("")
+        zbest_list.append("")
+        sightline_list.append(sightline_path)
+        pred_list.append(pred_path)
+        dlacat_list.append(dlacat_path)
+        group_list.append(group)
+        leaf_list.append(leaf)
 
     return {
         "spectra": np.array(spectra_list, dtype=object),
@@ -357,6 +450,7 @@ def main():
     sightline_sel = lists["sightline"][start:end]
     pred_sel = lists["pred"][start:end]
     dlacat_sel = lists["dlacat"][start:end]
+    leaf_sel = lists["leaf"][start:end]
 
     if args.generate_sightlines:
         if args.list_from_sightlines:
@@ -364,28 +458,59 @@ def main():
             args.generate_sightlines = False
 
     if args.generate_sightlines:
-        from desidlas.datasets.get_sightlines import get_sightlines
-
         print("\nGenerating sightlines (if missing)...")
         gen_start = time.time()
-        for spectra_path, truth_path, zbest_path, sightline_path in zip(
-            spectra_sel, truth_sel, zbest_sel, sightline_sel
-        ):
-            if not spectra_path:
-                continue
-            if os.path.exists(sightline_path) and not args.force_sightlines:
-                continue
-            os.makedirs(os.path.dirname(sightline_path), exist_ok=True)
-            if args.data_type == "mock":
-                truth_arg = []
-            else:
-                truth_arg = truth_path if truth_path and os.path.exists(truth_path) else []
-            zbest_arg = zbest_path if zbest_path and os.path.exists(zbest_path) else []
-            try:
-                get_sightlines(spectra_path, truth_arg, zbest_arg, sightline_path)
-            except Exception as exc:
-                print(f"Failed to build sightlines for {spectra_path}: {exc}")
+        if args.data_type == "data" and args.qso_catalog:
+            from desidlas.datasets.real_data_sightlines import (
+                make_desi_data_sightlines,
+                prepare_qso_catalog,
+                select_qsos_for_pixel,
+            )
+
+            qsos = prepare_qso_catalog(args.qso_catalog, z_min=args.z_min, z_max=args.z_max)
+            for spectra_path, sightline_path, pixel in zip(spectra_sel, sightline_sel, leaf_sel):
+                if not spectra_path:
+                    continue
+                if os.path.exists(sightline_path) and not args.force_sightlines:
+                    continue
+                pix_qsos = select_qsos_for_pixel(qsos, pixel, use_bal=args.use_bal)
+                try:
+                    make_desi_data_sightlines(
+                        spectra_path=spectra_path,
+                        qsocat=pix_qsos,
+                        output_dir=os.path.dirname(sightline_path),
+                        release=args.release,
+                        survey=args.survey,
+                        program=args.program,
+                        pixel=int(pixel),
+                        write_aux=not args.skip_realdata_aux,
+                    )
+                except Exception as exc:
+                    print(f"Failed to build real-data sightlines for {spectra_path}: {exc}")
+        else:
+            from desidlas.datasets.get_sightlines import get_sightlines
+
+            for spectra_path, truth_path, zbest_path, sightline_path in zip(
+                spectra_sel, truth_sel, zbest_sel, sightline_sel
+            ):
+                if not spectra_path:
+                    continue
+                if os.path.exists(sightline_path) and not args.force_sightlines:
+                    continue
+                os.makedirs(os.path.dirname(sightline_path), exist_ok=True)
+                if args.data_type == "mock":
+                    truth_arg = []
+                else:
+                    truth_arg = truth_path if truth_path and os.path.exists(truth_path) else []
+                zbest_arg = zbest_path if zbest_path and os.path.exists(zbest_path) else []
+                try:
+                    get_sightlines(spectra_path, truth_arg, zbest_arg, sightline_path)
+                except Exception as exc:
+                    print(f"Failed to build sightlines for {spectra_path}: {exc}")
         print(f"Sightline generation completed in {time.time() - gen_start:.2f}s\n")
+
+    if args.sightlines_only:
+        return
 
     existing_mask = np.array([os.path.exists(p) for p in sightline_sel])
     if not np.any(existing_mask):
