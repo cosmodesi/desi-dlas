@@ -307,10 +307,15 @@ def _discover_real_data_from_qso_catalog(args, patterns):
             pred_name = _format_pattern(patterns["pred_pattern"], args, leaf, group)
             dlacat_name = _format_pattern(patterns["dlacat_pattern"], args, leaf, group)
 
-            # Preserve the old real-data layout: sightline_root/<coadd-pixel>/<files>.
-            sightline_path = os.path.join(args.sightline_root, leaf, sightline_name)
-            pred_path = os.path.join(pred_root, leaf, pred_name)
-            dlacat_path = os.path.join(pred_root, leaf, dlacat_name)
+            sightline_path = _make_output_path(
+                args.sightline_root, patterns["output_layout"], group, leaf, sightline_name
+            )
+            pred_path = _make_output_path(
+                pred_root, patterns["output_layout"], group, leaf, pred_name
+            )
+            dlacat_path = _make_output_path(
+                pred_root, patterns["output_layout"], group, leaf, dlacat_name
+            )
 
             spectra_list.append(spectra_path)
             truth_list.append("")
