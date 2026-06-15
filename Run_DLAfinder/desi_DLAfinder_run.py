@@ -86,6 +86,8 @@ def parse_args(options=None):
                         help="Generate sightlines if missing.")
     parser.add_argument("--force-sightlines", action="store_true",
                         help="Regenerate sightlines even if they exist.")
+    parser.add_argument("--sightline-workers", type=int, default=1,
+                        help="CPU workers for real-data catalog-driven sightline generation.")
     parser.add_argument("--sightlines-only", action="store_true",
                         help="Stop after sightline generation.")
     parser.add_argument("--cpu-only", action="store_true",
@@ -449,6 +451,41 @@ def _stack_dla_catalogs(dlacat_paths, output_path):
     base_table.write(output_path, format="fits", overwrite=True)
 
 
+def _build_real_data_sightline_task(task):
+    (
+        spectra_path,
+        sightline_path,
+        pixel,
+        pix_qsos,
+        release,
+        survey,
+        program,
+        force_sightlines,
+        write_aux,
+    ) = task
+    if not spectra_path:
+        return ("skip", sightline_path, "missing spectra path")
+    if os.path.exists(sightline_path) and not force_sightlines:
+        return ("skip", sightline_path, "exists")
+
+    try:
+        from desidlas.datasets.real_data_sightlines import make_desi_data_sightlines
+
+        make_desi_data_sightlines(
+            spectra_path=spectra_path,
+            qsocat=pix_qsos,
+            output_dir=os.path.dirname(sightline_path),
+            release=release,
+            survey=survey,
+            program=program,
+            pixel=int(pixel),
+            write_aux=write_aux,
+        )
+    except Exception as exc:
+        return ("fail", spectra_path, str(exc))
+    return ("ok", sightline_path, len(pix_qsos))
+
+
 def main():
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     if repo_root not in sys.path:
@@ -514,12 +551,12 @@ def main():
         gen_start = time.time()
         if args.data_type == "data" and args.qso_catalog:
             from desidlas.datasets.real_data_sightlines import (
-                make_desi_data_sightlines,
                 prepare_qso_catalog,
                 select_qsos_for_pixel,
             )
 
             qsos = prepare_qso_catalog(args.qso_catalog, z_min=args.z_min, z_max=args.z_max)
+            realdata_tasks = []
             for spectra_path, sightline_path, pixel, qso_indices in zip(
                 spectra_sel, sightline_sel, leaf_sel, qso_indices_sel
             ):
@@ -531,19 +568,36 @@ def main():
                     pix_qsos = qsos[np.asarray(qso_indices, dtype=int)]
                 else:
                     pix_qsos = select_qsos_for_pixel(qsos, pixel, use_bal=args.use_bal)
-                try:
-                    make_desi_data_sightlines(
-                        spectra_path=spectra_path,
-                        qsocat=pix_qsos,
-                        output_dir=os.path.dirname(sightline_path),
-                        release=args.release,
-                        survey=args.survey,
-                        program=args.program,
-                        pixel=int(pixel),
-                        write_aux=not args.skip_realdata_aux,
+                realdata_tasks.append(
+                    (
+                        spectra_path,
+                        sightline_path,
+                        pixel,
+                        pix_qsos,
+                        args.release,
+                        args.survey,
+                        args.program,
+                        args.force_sightlines,
+                        not args.skip_realdata_aux,
                     )
-                except Exception as exc:
-                    print(f"Failed to build real-data sightlines for {spectra_path}: {exc}")
+                )
+
+            workers = max(1, int(args.sightline_workers))
+            print(f"Real-data sightline tasks: {len(realdata_tasks)}; workers: {workers}")
+            if workers > 1 and realdata_tasks:
+                from multiprocessing import Pool
+
+                with Pool(processes=workers) as pool:
+                    for status, path, info in pool.imap_unordered(
+                        _build_real_data_sightline_task, realdata_tasks, chunksize=1
+                    ):
+                        if status == "fail":
+                            print(f"Failed to build real-data sightlines for {path}: {info}")
+            else:
+                for task in realdata_tasks:
+                    status, path, info = _build_real_data_sightline_task(task)
+                    if status == "fail":
+                        print(f"Failed to build real-data sightlines for {path}: {info}")
         else:
             from desidlas.datasets.get_sightlines import get_sightlines
 
