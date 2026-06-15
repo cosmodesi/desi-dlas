@@ -250,9 +250,17 @@ def _discover_real_data_from_qso_catalog(args, patterns):
         raise ValueError("spectra_root is required to build real-data sightlines from a QSO catalog.")
 
     from desidlas.datasets.real_data_sightlines import healpix_group, prepare_qso_catalog
+    from astropy.io import fits
 
     qsos = prepare_qso_catalog(args.qso_catalog, z_min=args.z_min, z_max=args.z_max)
-    pixels = np.unique(qsos["HPXPIXEL"])
+    selection = qsos["ind"] == 1 if args.use_bal else qsos["z_ind"] == 1
+    selected_indices = np.nonzero(np.asarray(selection))[0]
+
+    target_to_qso_indices = {}
+    for qso_index in selected_indices:
+        targetid = int(qsos[qso_index]["TARGETID"])
+        target_to_qso_indices.setdefault(targetid, []).append(int(qso_index))
+    remaining_targetids = set(target_to_qso_indices)
 
     spectra_list = []
     truth_list = []
@@ -262,34 +270,68 @@ def _discover_real_data_from_qso_catalog(args, patterns):
     dlacat_list = []
     group_list = []
     leaf_list = []
+    qso_indices_list = []
 
     pred_root = args.scratch_out or args.sightline_root
-    for pixel in sorted(int(p) for p in pixels):
-        group = healpix_group(pixel)
-        leaf = str(pixel)
-        spectra_name = _format_pattern(patterns["spectra_pattern"], args, leaf, group)
-        spectra_path = os.path.join(args.spectra_root, group, leaf, spectra_name)
-        if not os.path.exists(spectra_path):
-            print(f"Missing spectra file, skipping pixel {pixel}: {spectra_path}")
+    for group in sorted(os.listdir(args.spectra_root)):
+        group_path = os.path.join(args.spectra_root, group)
+        if not os.path.isdir(group_path):
             continue
+        for leaf in sorted(os.listdir(group_path)):
+            leaf_path = os.path.join(group_path, leaf)
+            if not os.path.isdir(leaf_path):
+                continue
 
-        sightline_name = _format_pattern(patterns["sightline_pattern"], args, leaf, group)
-        pred_name = _format_pattern(patterns["pred_pattern"], args, leaf, group)
-        dlacat_name = _format_pattern(patterns["dlacat_pattern"], args, leaf, group)
+            spectra_name = _format_pattern(patterns["spectra_pattern"], args, leaf, group)
+            spectra_path = os.path.join(leaf_path, spectra_name)
+            if not os.path.exists(spectra_path):
+                continue
 
-        # Preserve the old real-data layout: sightline_root/<pixel>/<files>.
-        sightline_path = os.path.join(args.sightline_root, leaf, sightline_name)
-        pred_path = os.path.join(pred_root, leaf, pred_name)
-        dlacat_path = os.path.join(pred_root, leaf, dlacat_name)
+            try:
+                with fits.open(spectra_path, memmap=True) as hdul:
+                    spec_targetids = hdul[1].data["TARGETID"]
+                    matched_qso_indices = []
+                    for targetid in spec_targetids:
+                        targetid = int(targetid)
+                        if targetid in target_to_qso_indices:
+                            matched_qso_indices.extend(target_to_qso_indices[targetid])
+                            remaining_targetids.discard(targetid)
+            except Exception as exc:
+                print(f"Failed to inspect spectra file, skipping {spectra_path}: {exc}")
+                continue
 
-        spectra_list.append(spectra_path)
-        truth_list.append("")
-        zbest_list.append("")
-        sightline_list.append(sightline_path)
-        pred_list.append(pred_path)
-        dlacat_list.append(dlacat_path)
-        group_list.append(group)
-        leaf_list.append(leaf)
+            if not matched_qso_indices:
+                continue
+
+            sightline_name = _format_pattern(patterns["sightline_pattern"], args, leaf, group)
+            pred_name = _format_pattern(patterns["pred_pattern"], args, leaf, group)
+            dlacat_name = _format_pattern(patterns["dlacat_pattern"], args, leaf, group)
+
+            # Preserve the old real-data layout: sightline_root/<coadd-pixel>/<files>.
+            sightline_path = os.path.join(args.sightline_root, leaf, sightline_name)
+            pred_path = os.path.join(pred_root, leaf, pred_name)
+            dlacat_path = os.path.join(pred_root, leaf, dlacat_name)
+
+            spectra_list.append(spectra_path)
+            truth_list.append("")
+            zbest_list.append("")
+            sightline_list.append(sightline_path)
+            pred_list.append(pred_path)
+            dlacat_list.append(dlacat_path)
+            group_list.append(group)
+            leaf_list.append(leaf)
+            qso_indices_list.append(np.array(matched_qso_indices, dtype=int))
+
+    matched_qso_count = sum(len(indices) for indices in qso_indices_list)
+    print(
+        f"Matched {matched_qso_count} of {len(selected_indices)} selected catalog QSOs "
+        f"to {len(spectra_list)} coadd files."
+    )
+    if remaining_targetids:
+        print(
+            f"Warning: {len(remaining_targetids)} selected catalog TARGETIDs were not found "
+            f"under {args.spectra_root}; first missing TARGETID={next(iter(remaining_targetids))}"
+        )
 
     return {
         "spectra": np.array(spectra_list, dtype=object),
@@ -300,6 +342,7 @@ def _discover_real_data_from_qso_catalog(args, patterns):
         "dlacat": np.array(dlacat_list, dtype=object),
         "group": np.array(group_list, dtype=object),
         "leaf": np.array(leaf_list, dtype=object),
+        "qso_indices": np.array(qso_indices_list, dtype=object),
     }
 
 
@@ -368,7 +411,10 @@ def _load_or_build_lists(args, patterns):
 
     if os.path.exists(cache_path) and not args.rebuild_list:
         data = np.load(cache_path, allow_pickle=True)
-        return {key: data[key] for key in data.files}
+        if args.data_type == "data" and getattr(args, "qso_catalog", "") and "qso_indices" not in data.files:
+            print(f"Cached file list {cache_path} lacks qso_indices; rebuilding.")
+        else:
+            return {key: data[key] for key in data.files}
 
     data = _discover_files(args, patterns)
     np.savez(cache_path, **data)
@@ -451,6 +497,7 @@ def main():
     pred_sel = lists["pred"][start:end]
     dlacat_sel = lists["dlacat"][start:end]
     leaf_sel = lists["leaf"][start:end]
+    qso_indices_sel = lists.get("qso_indices", np.array([], dtype=object))[start:end]
 
     if args.generate_sightlines:
         if args.list_from_sightlines:
@@ -468,12 +515,17 @@ def main():
             )
 
             qsos = prepare_qso_catalog(args.qso_catalog, z_min=args.z_min, z_max=args.z_max)
-            for spectra_path, sightline_path, pixel in zip(spectra_sel, sightline_sel, leaf_sel):
+            for spectra_path, sightline_path, pixel, qso_indices in zip(
+                spectra_sel, sightline_sel, leaf_sel, qso_indices_sel
+            ):
                 if not spectra_path:
                     continue
                 if os.path.exists(sightline_path) and not args.force_sightlines:
                     continue
-                pix_qsos = select_qsos_for_pixel(qsos, pixel, use_bal=args.use_bal)
+                if len(qso_indices) > 0:
+                    pix_qsos = qsos[np.asarray(qso_indices, dtype=int)]
+                else:
+                    pix_qsos = select_qsos_for_pixel(qsos, pixel, use_bal=args.use_bal)
                 try:
                     make_desi_data_sightlines(
                         spectra_path=spectra_path,
